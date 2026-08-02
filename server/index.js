@@ -16,7 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 // Connect to MongoDB
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/storyhub';
+const MONGODB_URI = (process.env.MONGODB_URI || 'mongodb://localhost:27017/storyhub').trim();
 mongoose
   .connect(MONGODB_URI)
   .then(() => console.log('Successfully connected to MongoDB.'))
