@@ -5,7 +5,12 @@ const User = require('../models/User');
 // @route   POST /register
 // @desc    Register a new user
 exports.registerUser = async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, email, password, profileImage } = req.body;
+
+  // Basic Validation
+  if (!username || !email || !password) {
+    return res.status(400).json({ message: 'Please provide username, email, and password' });
+  }
 
   try {
     // Check if user exists
@@ -19,9 +24,10 @@ exports.registerUser = async (req, res) => {
       username,
       email,
       password,
+      profileImage: profileImage || '',
     });
 
-    // Hash password
+    // Hash password securely with bcrypt
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
 
@@ -35,6 +41,7 @@ exports.registerUser = async (req, res) => {
       },
     };
 
+    // Generate JWT Token
     jwt.sign(
       payload,
       process.env.JWT_SECRET || 'supersecretstoryhubkey12345',
@@ -47,13 +54,14 @@ exports.registerUser = async (req, res) => {
             id: user.id,
             username: user.username,
             email: user.email,
+            profileImage: user.profileImage,
           },
         });
       }
     );
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ message: 'Server Error' });
   }
 };
 
@@ -62,14 +70,19 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
   const { email, password } = req.body;
 
+  // Basic Validation
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Please provide email and password' });
+  }
+
   try {
-    // Check for user
+    // Check for user by email
     let user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Check password match
+    // Check password match with bcrypt
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
@@ -83,6 +96,7 @@ exports.loginUser = async (req, res) => {
       },
     };
 
+    // Generate JWT Token
     jwt.sign(
       payload,
       process.env.JWT_SECRET || 'supersecretstoryhubkey12345',
@@ -95,12 +109,13 @@ exports.loginUser = async (req, res) => {
             id: user.id,
             username: user.username,
             email: user.email,
+            profileImage: user.profileImage,
           },
         });
       }
     );
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ message: 'Server Error' });
   }
 };

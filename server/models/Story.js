@@ -1,32 +1,42 @@
 const mongoose = require('mongoose');
 
-const StorySchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true,
-    trim: true,
+const StorySchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    category: {
+      type: String,
+      required: true,
+      enum: ['Fantasy', 'Romance', 'Horror', 'Mystery', 'Adventure', 'Sci-Fi', 'Comedy'],
+      default: 'Fantasy',
+    },
+    content: {
+      type: String,
+      required: true,
+    },
+    author: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    authorName: {
+      type: String,
+    },
+    readTime: {
+      type: String,
+      default: '5 min read',
+    },
+    likes: {
+      type: Number,
+      default: 0,
+    },
   },
-  content: {
-    type: String,
-    required: true,
-  },
-  author: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-  },
-  authorName: {
-    type: String,
-    required: true,
-  },
-  readTime: {
-    type: String,
-    default: '5 min read',
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
+  {
+    timestamps: true,
+  }
+);
 
 module.exports = mongoose.model('Story', StorySchema);
