@@ -3,8 +3,16 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 
+// Ensure models are registered with Mongoose
+require('./models/User');
+require('./models/Story');
+require('./models/Comment');
+require('./models/Bookmark');
+
 const authRoutes = require('./routes/authRoutes');
 const storyRoutes = require('./routes/storyRoutes');
+const commentRoutes = require('./routes/commentRoutes');
+const bookmarkRoutes = require('./routes/bookmarkRoutes');
 
 const app = express();
 
@@ -22,6 +30,8 @@ mongoose
 // Routes
 app.use('/', authRoutes);
 app.use('/stories', storyRoutes);
+app.use('/comments', commentRoutes);
+app.use('/bookmark', bookmarkRoutes);
 
 // Start Server
 const PORT = process.env.PORT || 5000;
