@@ -4,10 +4,14 @@ import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
 import '../models/story.dart';
 import '../models/user.dart';
+import '../models/comment.dart';
 
 class ApiService {
   static String? authToken;
   static User? currentUser;
+
+  // In-memory comments store for offline session
+  static final Map<String, List<Comment>> _localCommentsStore = {};
 
   static String get baseUrl {
     if (kIsWeb) {
@@ -55,7 +59,6 @@ class ApiService {
         return {'success': false, 'message': data['message'] ?? 'Registration failed'};
       }
     } catch (e) {
-      // Fallback offline mock registration if backend server is not running
       authToken = 'mock_jwt_token_${DateTime.now().millisecondsSinceEpoch}';
       currentUser = User(
         id: 'user_offline_123',
@@ -99,7 +102,6 @@ class ApiService {
         return {'success': false, 'message': data['message'] ?? 'Invalid credentials'};
       }
     } catch (e) {
-      // Fallback offline mock login if backend server is not running
       authToken = 'mock_jwt_token_${DateTime.now().millisecondsSinceEpoch}';
       currentUser = User(
         id: 'user_offline_123',
@@ -115,7 +117,7 @@ class ApiService {
     }
   }
 
-  // --- Fetch Stories (with Dummy Fallback) ---
+  // --- Fetch Stories ---
   Future<List<Story>> fetchStories() async {
     final url = Uri.parse('$baseUrl/stories');
     try {
@@ -127,11 +129,88 @@ class ApiService {
           return data.map((item) => Story.fromJson(item)).toList();
         }
       }
-    } catch (_) {
-      // Fallback to dummy curated stories matching mockups
-    }
+    } catch (_) {}
 
     return getDummyStories();
+  }
+
+  // --- Comments API ---
+  Future<List<Comment>> fetchComments(String storyId) async {
+    final url = Uri.parse('$baseUrl/comments/$storyId');
+    try {
+      final response = await client.get(url).timeout(const Duration(seconds: 2));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((item) => Comment.fromJson(item)).toList();
+      }
+    } catch (_) {}
+
+    // Offline / Fallback dummy comments
+    if (!_localCommentsStore.containsKey(storyId)) {
+      _localCommentsStore[storyId] = [
+        Comment(
+          id: 'c1',
+          storyId: storyId,
+          userId: 'u101',
+          userName: 'Elena Rostova',
+          comment: 'This chapter was absolutely captivating! The atmosphere and descriptive imagery gave me goosebumps.',
+          createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+        ),
+        Comment(
+          id: 'c2',
+          storyId: storyId,
+          userId: 'u102',
+          userName: 'Julian Vance',
+          comment: 'I love how the plot unfolds. Can’t wait for the next chapter update!',
+          createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+        ),
+      ];
+    }
+
+    return _localCommentsStore[storyId]!;
+  }
+
+  Future<Comment> postComment({required String storyId, required String text}) async {
+    final username = currentUser?.username ?? 'Januli';
+    final userId = currentUser?.id ?? 'user_123';
+
+    final url = Uri.parse('$baseUrl/comments');
+    try {
+      final response = await client.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (authToken != null) 'Authorization': 'Bearer $authToken',
+        },
+        body: json.encode({
+          'storyId': storyId,
+          'comment': text,
+        }),
+      ).timeout(const Duration(seconds: 2));
+
+      if (response.statusCode == 201) {
+        final data = json.decode(response.body);
+        return Comment.fromJson(data);
+      }
+    } catch (_) {}
+
+    // Offline local post comment creation
+    final newComment = Comment(
+      id: 'c_${DateTime.now().millisecondsSinceEpoch}',
+      storyId: storyId,
+      userId: userId,
+      userName: username,
+      comment: text,
+      createdAt: DateTime.now(),
+    );
+
+    if (!_localCommentsStore.containsKey(storyId)) {
+      _localCommentsStore[storyId] = [];
+    }
+    _localCommentsStore[storyId]!.insert(0, newComment);
+
+    return newComment;
   }
 
   static List<Story> getDummyStories() {
@@ -139,7 +218,7 @@ class ApiService {
       Story(
         id: '1',
         title: 'The Whispering Woods',
-        category: 'MYSTERY',
+        category: 'Mystery',
         authorName: 'Elara Vance',
         likes: 342,
         rating: 4.8,
@@ -157,7 +236,7 @@ He reached out, his fingers trembling. The bark was surprisingly warm, pulsating
       Story(
         id: '2',
         title: 'Stellar Horizons',
-        category: 'SCI-FI',
+        category: 'Science Fiction',
         authorName: 'Julian Rossi',
         likes: 512,
         rating: 4.9,
@@ -173,7 +252,7 @@ Signals had been emanating from the moon's dark side for three cycles—not stat
       Story(
         id: '3',
         title: 'Echoes of the Silent Peak',
-        category: 'LITERARY',
+        category: 'Adventure',
         authorName: 'Marcus Thorne',
         likes: 428,
         rating: 4.7,
@@ -187,7 +266,7 @@ Today, however, the shadow did not move as expected. It bent backward, defying g
       Story(
         id: '4',
         title: "The Sunflowers' Secret",
-        category: 'ROMANCE',
+        category: 'Romance',
         authorName: 'Sienna Rivers',
         likes: 620,
         rating: 4.9,
@@ -201,7 +280,7 @@ Until the Tuesday when rain washed away the veil of anonymity, and a tall artist
       Story(
         id: '5',
         title: 'Risen from the Ashes',
-        category: 'FANTASY',
+        category: 'Fantasy',
         authorName: 'Aria Nightshade',
         likes: 890,
         rating: 4.6,
@@ -214,8 +293,32 @@ Kaelen knew he was no prince—he was just a blacksmith's apprentice. But when h
       ),
       Story(
         id: '6',
+        title: 'Shadows in the Manor',
+        category: 'Horror',
+        authorName: 'Damian Blackwood',
+        likes: 380,
+        rating: 4.8,
+        chapters: 15,
+        readsCount: '19k reads',
+        readTime: '8 min read',
+        content: '''The clock struck midnight as the footsteps echoed down the empty corridor of Ravenhurst Manor, though no shadow crossed the moonlit floor.''',
+      ),
+      Story(
+        id: '7',
+        title: 'The Great Coffee Heist',
+        category: 'Comedy',
+        authorName: 'Leo Sterling',
+        likes: 490,
+        rating: 4.7,
+        chapters: 10,
+        readsCount: '11k reads',
+        readTime: '5 min read',
+        content: '''Stealing the world's last tin of artisanal espresso seemed like a brilliant idea—until the chief of police turned out to be Leo's barista.''',
+      ),
+      Story(
+        id: '8',
         title: 'Locked in Silence',
-        category: 'THRILLER',
+        category: 'Mystery',
         authorName: 'Gideon Graves',
         likes: 310,
         rating: 4.8,
@@ -225,30 +328,6 @@ Kaelen knew he was no prince—he was just a blacksmith's apprentice. But when h
         content: '''The keyhole in the old oak door of Room 404 was keyless. Detective Miller peered through it, expecting darkness, but saw a lit room with a typewriter typing by itself.
 
 Each keystroke echoed through the empty hallway, spelling out Miller's own name and the secret he had buried ten years ago.''',
-      ),
-      Story(
-        id: '7',
-        title: "Mornings at May's",
-        category: 'DRAMA',
-        authorName: 'Clara Bloom',
-        likes: 275,
-        rating: 4.5,
-        chapters: 14,
-        readsCount: '9k reads',
-        readTime: '5 min read',
-        content: '''May's Diner had served cinnamon rolls and hot coffee since 1978. It was the heart of Millfield, where strangers became confidants over steaming mugs and quiet morning conversations.''',
-      ),
-      Story(
-        id: '8',
-        title: 'The Inkwell Veil',
-        category: 'HISTORY',
-        authorName: 'Arthur Penhallgon',
-        likes: 540,
-        rating: 4.9,
-        chapters: 22,
-        readsCount: '18k reads',
-        readTime: '11 min read',
-        content: '''In the archives of Venice during the Renaissance, scribes wrote encoded letters to protect royal manuscripts from thieves. A single drops of indigo ink hid entire maps across empires.''',
       ),
     ];
   }

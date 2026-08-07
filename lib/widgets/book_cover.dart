@@ -23,63 +23,61 @@ class BookCoverWidget extends StatelessWidget {
     IconData centerIcon;
     Color accentColor;
 
-    switch (category.toUpperCase()) {
-      case 'MYSTERY':
-        bgStart = const Color(0xFFF7F1E5);
-        bgEnd = const Color(0xFFEBE0CE);
-        centerIcon = Icons.landscape_rounded;
-        accentColor = const Color(0xFFC05A2B);
-        break;
-      case 'SCI-FI':
-        bgStart = const Color(0xFFEBF3F5);
-        bgEnd = const Color(0xFFD6E6EB);
-        centerIcon = Icons.blur_on_rounded;
-        accentColor = const Color(0xFF2C7A7B);
-        break;
-      case 'LITERARY':
-        bgStart = const Color(0xFFF2F4F8);
-        bgEnd = const Color(0xFFE2E7F0);
-        centerIcon = Icons.filter_hdr_rounded;
-        accentColor = const Color(0xFF4A5568);
-        break;
-      case 'ROMANCE':
-        bgStart = const Color(0xFFFAF3F0);
-        bgEnd = const Color(0xFFF0E4DF);
-        centerIcon = Icons.local_florist_rounded;
-        accentColor = const Color(0xFFDD6B20);
-        break;
-      case 'FANTASY':
-        bgStart = const Color(0xFF1A202C);
-        bgEnd = const Color(0xFF2D3748);
-        centerIcon = Icons.local_fire_department_rounded;
-        accentColor = const Color(0xFFD69E2E);
-        break;
-      case 'THRILLER':
-        bgStart = const Color(0xFF2D3748);
-        bgEnd = const Color(0xFF1A202C);
-        centerIcon = Icons.vpn_key_rounded;
-        accentColor = const Color(0xFFE53E3E);
-        break;
-      case 'DRAMA':
-        bgStart = const Color(0xFFFFFAF0);
-        bgEnd = const Color(0xFFFEEBC8);
-        centerIcon = Icons.coffee_rounded;
-        accentColor = const Color(0xFFC05A2B);
-        break;
-      case 'HISTORY':
-        bgStart = const Color(0xFFF7FAFC);
-        bgEnd = const Color(0xFFEDF2F7);
-        centerIcon = Icons.history_edu_rounded;
-        accentColor = const Color(0xFFB83B00);
-        break;
-      default:
-        bgStart = const Color(0xFFF7F1E5);
-        bgEnd = const Color(0xFFEBE0CE);
-        centerIcon = Icons.menu_book_rounded;
-        accentColor = const Color(0xFFB83B00);
+    final catUpper = category.toUpperCase();
+
+    if (catUpper.contains('MYSTERY')) {
+      bgStart = const Color(0xFFF7F1E5);
+      bgEnd = const Color(0xFFEBE0CE);
+      centerIcon = Icons.landscape_rounded;
+      accentColor = const Color(0xFFC05A2B);
+    } else if (catUpper.contains('SCI') || catUpper.contains('SCIENCE')) {
+      bgStart = const Color(0xFFEBF3F5);
+      bgEnd = const Color(0xFFD6E6EB);
+      centerIcon = Icons.blur_on_rounded;
+      accentColor = const Color(0xFF2C7A7B);
+    } else if (catUpper.contains('LITERARY')) {
+      bgStart = const Color(0xFFF2F4F8);
+      bgEnd = const Color(0xFFE2E7F0);
+      centerIcon = Icons.filter_hdr_rounded;
+      accentColor = const Color(0xFF4A5568);
+    } else if (catUpper.contains('ROMANCE')) {
+      bgStart = const Color(0xFFFAF3F0);
+      bgEnd = const Color(0xFFF0E4DF);
+      centerIcon = Icons.local_florist_rounded;
+      accentColor = const Color(0xFFDD6B20);
+    } else if (catUpper.contains('FANTASY')) {
+      bgStart = const Color(0xFF1A202C);
+      bgEnd = const Color(0xFF2D3748);
+      centerIcon = Icons.local_fire_department_rounded;
+      accentColor = const Color(0xFFD69E2E);
+    } else if (catUpper.contains('THRILLER') || catUpper.contains('HORROR')) {
+      bgStart = const Color(0xFF2D3748);
+      bgEnd = const Color(0xFF1A202C);
+      centerIcon = Icons.vpn_key_rounded;
+      accentColor = const Color(0xFFE53E3E);
+    } else if (catUpper.contains('ADVENTURE')) {
+      bgStart = const Color(0xFFF0FDF4);
+      bgEnd = const Color(0xFFDCFCE7);
+      centerIcon = Icons.explore_rounded;
+      accentColor = const Color(0xFF15803D);
+    } else if (catUpper.contains('COMEDY')) {
+      bgStart = const Color(0xFFFEF9C3);
+      bgEnd = const Color(0xFFFEF08A);
+      centerIcon = Icons.sentiment_very_satisfied_rounded;
+      accentColor = const Color(0xFFA16207);
+    } else if (catUpper.contains('DRAMA')) {
+      bgStart = const Color(0xFFFFFAF0);
+      bgEnd = const Color(0xFFFEEBC8);
+      centerIcon = Icons.coffee_rounded;
+      accentColor = const Color(0xFFC05A2B);
+    } else {
+      bgStart = const Color(0xFFF7F1E5);
+      bgEnd = const Color(0xFFEBE0CE);
+      centerIcon = Icons.menu_book_rounded;
+      accentColor = const Color(0xFFB83B00);
     }
 
-    final isDark = category.toUpperCase() == 'FANTASY' || category.toUpperCase() == 'THRILLER';
+    final isDark = catUpper.contains('FANTASY') || catUpper.contains('THRILLER') || catUpper.contains('HORROR');
     final textColor = isDark ? Colors.white : const Color(0xFF2D241E);
     final subtextColor = isDark ? Colors.grey[400] : const Color(0xFF756C65);
 
@@ -106,7 +104,6 @@ class BookCoverWidget extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Subtle inner margin frame
           Positioned.fill(
             child: Padding(
               padding: const EdgeInsets.all(8.0),
