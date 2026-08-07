@@ -5,6 +5,7 @@ class Comment {
   final String storyId;
   final User? user;
   final String userId;
+  final String userName;
   final String comment;
   final DateTime? createdAt;
 
@@ -13,6 +14,7 @@ class Comment {
     required this.storyId,
     this.user,
     required this.userId,
+    this.userName = 'Reader',
     required this.comment,
     this.createdAt,
   });
@@ -20,10 +22,14 @@ class Comment {
   factory Comment.fromJson(Map<String, dynamic> json) {
     User? userObj;
     String uId = '';
+    String uName = 'Reader';
 
     if (json['userId'] is Map<String, dynamic>) {
       userObj = User.fromJson(json['userId'] as Map<String, dynamic>);
       uId = userObj.id;
+      uName = userObj.username;
+    } else if (json['userName'] != null) {
+      uName = json['userName'] as String;
     } else if (json['userId'] is String) {
       uId = json['userId'] as String;
     }
@@ -35,6 +41,7 @@ class Comment {
           : json['storyId']) as String? ?? '',
       user: userObj,
       userId: uId,
+      userName: uName,
       comment: json['comment'] as String? ?? '',
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())
@@ -47,6 +54,7 @@ class Comment {
       'id': id,
       'storyId': storyId,
       'userId': user?.toJson() ?? userId,
+      'userName': userName,
       'comment': comment,
       'createdAt': createdAt?.toIso8601String(),
     };

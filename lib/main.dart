@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:story_hub/screens/home_screen.dart';
+import 'screens/splash_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/register_screen.dart';
+import 'screens/home_screen.dart';
 
 void main() {
   runApp(const StoryHubApp());
@@ -10,16 +13,29 @@ class StoryHubApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const primaryColor = Color(0xFFB83B00);
+    const backgroundColor = Color(0xFFFBF9F5);
+
     return MaterialApp(
       title: 'StoryHub',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        brightness: Brightness.dark,
-        primarySwatch: Colors.indigo,
         useMaterial3: true,
-        fontFamily: 'Roboto',
+        scaffoldBackgroundColor: backgroundColor,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: primaryColor,
+          primary: primaryColor,
+          surface: backgroundColor,
+        ),
+        fontFamily: 'Serif',
       ),
-      home: const HomeScreen(),
+      initialRoute: '/login',
+      routes: {
+        '/': (context) => const SplashScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
+        '/home': (context) => const HomeScreen(),
+      },
     );
   }
 }

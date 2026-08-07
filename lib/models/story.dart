@@ -9,6 +9,10 @@ class Story {
   final String authorName;
   final String readTime;
   final int likes;
+  final double rating;
+  final int chapters;
+  final String readsCount;
+  final String? coverUrl;
   final DateTime? createdAt;
 
   Story({
@@ -19,7 +23,11 @@ class Story {
     this.author,
     required this.authorName,
     this.readTime = '5 min read',
-    this.likes = 0,
+    this.likes = 120,
+    this.rating = 4.8,
+    this.chapters = 12,
+    this.readsCount = '10k reads',
+    this.coverUrl,
     this.createdAt,
   });
 
@@ -44,7 +52,11 @@ class Story {
       author: authorObj,
       authorName: name,
       readTime: json['readTime'] as String? ?? '5 min read',
-      likes: json['likes'] as int? ?? 0,
+      likes: (json['likes'] is num) ? (json['likes'] as num).toInt() : 120,
+      rating: (json['rating'] is num) ? (json['rating'] as num).toDouble() : 4.8,
+      chapters: (json['chapters'] is num) ? (json['chapters'] as num).toInt() : 12,
+      readsCount: json['readsCount'] as String? ?? '10k reads',
+      coverUrl: json['coverUrl'] as String?,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())
           : null,
@@ -61,6 +73,10 @@ class Story {
       'authorName': authorName,
       'readTime': readTime,
       'likes': likes,
+      'rating': rating,
+      'chapters': chapters,
+      'readsCount': readsCount,
+      'coverUrl': coverUrl,
       'createdAt': createdAt?.toIso8601String(),
     };
   }
