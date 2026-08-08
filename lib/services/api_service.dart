@@ -10,7 +10,8 @@ class ApiService {
   static String? authToken;
   static User? currentUser;
 
-  // In-memory comments store for offline session
+  // In-memory store for created stories and comments when offline
+  static final List<Story> _userCreatedStories = [];
   static final Map<String, List<Comment>> _localCommentsStore = {};
 
   static String get baseUrl {
@@ -126,12 +127,70 @@ class ApiService {
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         if (data.isNotEmpty) {
-          return data.map((item) => Story.fromJson(item)).toList();
+          final fetched = data.map((item) => Story.fromJson(item)).toList();
+          return [..._userCreatedStories, ...fetched];
         }
       }
     } catch (_) {}
 
-    return getDummyStories();
+    return [..._userCreatedStories, ...getDummyStories()];
+  }
+
+  // --- Create / Publish Story API ---
+  Future<Map<String, dynamic>> createStory({
+    required String title,
+    required String category,
+    required String content,
+  }) async {
+    final url = Uri.parse('$baseUrl/stories');
+    final authorName = currentUser?.username ?? 'Januli';
+
+    try {
+      final response = await client.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (authToken != null) 'Authorization': 'Bearer $authToken',
+        },
+        body: json.encode({
+          'title': title,
+          'category': category,
+          'content': content,
+          'authorName': authorName,
+        }),
+      ).timeout(const Duration(seconds: 3));
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final newStory = Story.fromJson(data);
+        _userCreatedStories.insert(0, newStory);
+        return {'success': true, 'story': newStory};
+      } else {
+        return {'success': false, 'message': data['message'] ?? 'Failed to publish story'};
+      }
+    } catch (e) {
+      // Offline fallback story creation
+      final wordsCount = content.trim().split(RegExp(r'\s+')).length;
+      final estReadTime = '${(wordsCount / 150).ceil()} min read';
+
+      final offlineStory = Story(
+        id: 'created_${DateTime.now().millisecondsSinceEpoch}',
+        title: title,
+        category: category,
+        content: content,
+        authorName: authorName,
+        likes: 1,
+        rating: 5.0,
+        chapters: 1,
+        readsCount: '1 read',
+        readTime: estReadTime,
+        createdAt: DateTime.now(),
+      );
+
+      _userCreatedStories.insert(0, offlineStory);
+      return {'success': true, 'story': offlineStory, 'isOffline': true};
+    }
   }
 
   // --- Comments API ---
@@ -146,7 +205,6 @@ class ApiService {
       }
     } catch (_) {}
 
-    // Offline / Fallback dummy comments
     if (!_localCommentsStore.containsKey(storyId)) {
       _localCommentsStore[storyId] = [
         Comment(
@@ -195,7 +253,6 @@ class ApiService {
       }
     } catch (_) {}
 
-    // Offline local post comment creation
     final newComment = Comment(
       id: 'c_${DateTime.now().millisecondsSinceEpoch}',
       storyId: storyId,

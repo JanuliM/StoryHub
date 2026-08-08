@@ -3,6 +3,7 @@ import '../models/story.dart';
 import '../services/api_service.dart';
 import '../widgets/story_card.dart';
 import 'story_detail_screen.dart';
+import 'create_story_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -61,6 +62,19 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context) => StoryDetailScreen(story: story),
       ),
     );
+  }
+
+  Future<void> _openCreateStory() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CreateStoryScreen(),
+      ),
+    );
+
+    if (result == true) {
+      _loadStories();
+    }
   }
 
   List<Story> _filterStories(List<Story> stories) {
@@ -441,11 +455,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Floating Action Button
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Create a new Story')),
-          );
-        },
+        onPressed: _openCreateStory,
         backgroundColor: const Color(0xFFFF5722),
         foregroundColor: Colors.white,
         elevation: 4,
@@ -466,7 +476,11 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedLabelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
         unselectedLabelStyle: const TextStyle(fontSize: 11),
         onTap: (index) {
-          setState(() => _currentBottomNavIndex = index);
+          if (index == 2) {
+            _openCreateStory();
+          } else {
+            setState(() => _currentBottomNavIndex = index);
+          }
         },
         items: const [
           BottomNavigationBarItem(
