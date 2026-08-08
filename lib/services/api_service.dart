@@ -136,6 +136,28 @@ class ApiService {
     return [..._userCreatedStories, ...getDummyStories()];
   }
 
+  // --- Delete Story API ---
+  Future<Map<String, dynamic>> deleteStory(String storyId) async {
+    final url = Uri.parse('$baseUrl/stories/$storyId');
+    try {
+      final response = await client.delete(
+        url,
+        headers: {
+          if (authToken != null) 'Authorization': 'Bearer $authToken',
+        },
+      ).timeout(const Duration(seconds: 3));
+
+      if (response.statusCode == 200) {
+        _userCreatedStories.removeWhere((s) => s.id == storyId);
+        return {'success': true};
+      }
+    } catch (_) {}
+
+    // Offline local delete fallback
+    _userCreatedStories.removeWhere((s) => s.id == storyId);
+    return {'success': true, 'isOffline': true};
+  }
+
   // --- User Profile & Library Data ---
   Future<List<Story>> fetchUserStories() async {
     final all = await fetchStories();
@@ -265,7 +287,7 @@ class ApiService {
           id: 'c2',
           storyId: storyId,
           userId: 'u102',
-          userName: 'Julian Vance',
+          userName: 'Januli',
           comment: 'I love how the plot unfolds. Can’t wait for the next chapter update!',
           createdAt: DateTime.now().subtract(const Duration(hours: 1)),
         ),
@@ -314,6 +336,32 @@ class ApiService {
     _localCommentsStore[storyId]!.insert(0, newComment);
 
     return newComment;
+  }
+
+  // --- Delete Comment API ---
+  Future<Map<String, dynamic>> deleteComment({required String commentId, required String storyId}) async {
+    final url = Uri.parse('$baseUrl/comments/$commentId');
+    try {
+      final response = await client.delete(
+        url,
+        headers: {
+          if (authToken != null) 'Authorization': 'Bearer $authToken',
+        },
+      ).timeout(const Duration(seconds: 2));
+
+      if (response.statusCode == 200) {
+        if (_localCommentsStore.containsKey(storyId)) {
+          _localCommentsStore[storyId]!.removeWhere((c) => c.id == commentId);
+        }
+        return {'success': true};
+      }
+    } catch (_) {}
+
+    // Offline fallback comment deletion
+    if (_localCommentsStore.containsKey(storyId)) {
+      _localCommentsStore[storyId]!.removeWhere((c) => c.id == commentId);
+    }
+    return {'success': true, 'isOffline': true};
   }
 
   static List<Story> getDummyStories() {

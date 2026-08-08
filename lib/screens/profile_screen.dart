@@ -33,13 +33,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  void _openStoryDetail(Story story) {
-    Navigator.push(
+  Future<void> _openStoryDetail(Story story) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => StoryDetailScreen(story: story),
       ),
     );
+
+    if (result == true) {
+      _loadData();
+    }
   }
 
   Future<void> _openCreateStory() async {
@@ -52,6 +56,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (result == true) {
       _loadData();
+    }
+  }
+
+  Future<void> _confirmDeleteStory(Story story) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFFFBF9F5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Delete Story',
+          style: TextStyle(fontFamily: 'Serif', fontWeight: FontWeight.bold),
+        ),
+        content: Text('Are you sure you want to delete "${story.title}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF736860))),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            child: const Text('Delete Story', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _apiService.deleteStory(story.id);
+      _loadData();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Story deleted successfully')),
+      );
     }
   }
 
@@ -344,50 +383,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         final stories = snapshot.data ?? [];
 
-        return Stack(
-          children: [
-            if (stories.isEmpty)
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('✍️', style: TextStyle(fontSize: 48)),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'You haven\'t published any stories yet',
-                      style: TextStyle(
-                        fontFamily: 'Serif',
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E1814),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _openCreateStory,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFB83B00),
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('Write Your First Story'),
-                    ),
-                  ],
+        if (stories.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('✍️', style: TextStyle(fontSize: 48)),
+                const SizedBox(height: 12),
+                const Text(
+                  'You haven\'t published any stories yet',
+                  style: TextStyle(
+                    fontFamily: 'Serif',
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E1814),
+                  ),
                 ),
-              )
-            else
-              ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: stories.length,
-                itemBuilder: (context, index) {
-                  final story = stories[index];
-                  return StoryCard(
-                    story: story,
-                    cardType: StoryCardType.recommendation,
-                    onTap: () => _openStoryDetail(story),
-                  );
-                },
-              ),
-          ],
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _openCreateStory,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFB83B00),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Write Your First Story'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: stories.length,
+          itemBuilder: (context, index) {
+            final story = stories[index];
+            return Stack(
+              alignment: Alignment.topRight,
+              children: [
+                StoryCard(
+                  story: story,
+                  cardType: StoryCardType.recommendation,
+                  onTap: () => _openStoryDetail(story),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                    tooltip: 'Delete Story',
+                    onPressed: () => _confirmDeleteStory(story),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
