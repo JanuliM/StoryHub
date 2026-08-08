@@ -136,6 +136,53 @@ class ApiService {
     return [..._userCreatedStories, ...getDummyStories()];
   }
 
+  // --- User Profile & Library Data ---
+  Future<List<Story>> fetchUserStories() async {
+    final all = await fetchStories();
+    final name = currentUser?.username ?? 'Januli';
+    final userStories = all.where((s) => s.authorName.toLowerCase() == name.toLowerCase()).toList();
+    
+    if (userStories.isEmpty) {
+      return [
+        Story(
+          id: 'my_1',
+          title: 'Chronicles of the Ember Realm',
+          category: 'Fantasy',
+          authorName: name,
+          likes: 245,
+          rating: 4.9,
+          chapters: 12,
+          readsCount: '8.2k reads',
+          readTime: '10 min read',
+          content: 'The embers flared softly in the blacksmith shop as the ancient runes came alive...',
+        ),
+        Story(
+          id: 'my_2',
+          title: 'Whispers at Midnight',
+          category: 'Mystery',
+          authorName: name,
+          likes: 189,
+          rating: 4.7,
+          chapters: 8,
+          readsCount: '5.1k reads',
+          readTime: '7 min read',
+          content: 'A quiet tapping at the stained glass window woke Evelyn from a deep sleep...',
+        ),
+      ];
+    }
+    return userStories;
+  }
+
+  Future<List<Story>> fetchLikedStories() async {
+    final all = await fetchStories();
+    return all.take(4).toList();
+  }
+
+  Future<List<Story>> fetchBookmarkedStories() async {
+    final all = await fetchStories();
+    return all.skip(2).take(4).toList();
+  }
+
   // --- Create / Publish Story API ---
   Future<Map<String, dynamic>> createStory({
     required String title,
@@ -170,7 +217,6 @@ class ApiService {
         return {'success': false, 'message': data['message'] ?? 'Failed to publish story'};
       }
     } catch (e) {
-      // Offline fallback story creation
       final wordsCount = content.trim().split(RegExp(r'\s+')).length;
       final estReadTime = '${(wordsCount / 150).ceil()} min read';
 

@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 import '../widgets/story_card.dart';
 import 'story_detail_screen.dart';
 import 'create_story_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -77,6 +78,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _openProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ProfileScreen(),
+      ),
+    );
+  }
+
   List<Story> _filterStories(List<Story> stories) {
     return stories.where((story) {
       // Category filter matching
@@ -139,6 +149,10 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.notifications_none_outlined, color: primaryTerracotta, size: 22),
             onPressed: () {},
+          ),
+          IconButton(
+            icon: const Icon(Icons.person_outline_rounded, color: textColorDark, size: 24),
+            onPressed: _openProfile,
           ),
           const SizedBox(width: 4),
         ],
@@ -478,6 +492,8 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: (index) {
           if (index == 2) {
             _openCreateStory();
+          } else if (index == 3) {
+            _openProfile();
           } else {
             setState(() => _currentBottomNavIndex = index);
           }
