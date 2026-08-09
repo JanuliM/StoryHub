@@ -10,7 +10,8 @@ class ApiService {
   static String? authToken;
   static User? currentUser;
 
-  // In-memory comments store for offline session
+  // In-memory store for created stories and comments when offline
+  static final List<Story> _userCreatedStories = [];
   static final Map<String, List<Comment>> _localCommentsStore = {};
 
   static String get baseUrl {
@@ -126,12 +127,138 @@ class ApiService {
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         if (data.isNotEmpty) {
-          return data.map((item) => Story.fromJson(item)).toList();
+          final fetched = data.map((item) => Story.fromJson(item)).toList();
+          return [..._userCreatedStories, ...fetched];
         }
       }
     } catch (_) {}
 
-    return getDummyStories();
+    return [..._userCreatedStories, ...getDummyStories()];
+  }
+
+  // --- Delete Story API ---
+  Future<Map<String, dynamic>> deleteStory(String storyId) async {
+    final url = Uri.parse('$baseUrl/stories/$storyId');
+    try {
+      final response = await client.delete(
+        url,
+        headers: {
+          if (authToken != null) 'Authorization': 'Bearer $authToken',
+        },
+      ).timeout(const Duration(seconds: 3));
+
+      if (response.statusCode == 200) {
+        _userCreatedStories.removeWhere((s) => s.id == storyId);
+        return {'success': true};
+      }
+    } catch (_) {}
+
+    // Offline local delete fallback
+    _userCreatedStories.removeWhere((s) => s.id == storyId);
+    return {'success': true, 'isOffline': true};
+  }
+
+  // --- User Profile & Library Data ---
+  Future<List<Story>> fetchUserStories() async {
+    final all = await fetchStories();
+    final name = currentUser?.username ?? 'Januli';
+    final userStories = all.where((s) => s.authorName.toLowerCase() == name.toLowerCase()).toList();
+    
+    if (userStories.isEmpty) {
+      return [
+        Story(
+          id: 'my_1',
+          title: 'Chronicles of the Ember Realm',
+          category: 'Fantasy',
+          authorName: name,
+          likes: 245,
+          rating: 4.9,
+          chapters: 12,
+          readsCount: '8.2k reads',
+          readTime: '10 min read',
+          content: 'The embers flared softly in the blacksmith shop as the ancient runes came alive...',
+        ),
+        Story(
+          id: 'my_2',
+          title: 'Whispers at Midnight',
+          category: 'Mystery',
+          authorName: name,
+          likes: 189,
+          rating: 4.7,
+          chapters: 8,
+          readsCount: '5.1k reads',
+          readTime: '7 min read',
+          content: 'A quiet tapping at the stained glass window woke Evelyn from a deep sleep...',
+        ),
+      ];
+    }
+    return userStories;
+  }
+
+  Future<List<Story>> fetchLikedStories() async {
+    final all = await fetchStories();
+    return all.take(4).toList();
+  }
+
+  Future<List<Story>> fetchBookmarkedStories() async {
+    final all = await fetchStories();
+    return all.skip(2).take(4).toList();
+  }
+
+  // --- Create / Publish Story API ---
+  Future<Map<String, dynamic>> createStory({
+    required String title,
+    required String category,
+    required String content,
+  }) async {
+    final url = Uri.parse('$baseUrl/stories');
+    final authorName = currentUser?.username ?? 'Januli';
+
+    try {
+      final response = await client.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (authToken != null) 'Authorization': 'Bearer $authToken',
+        },
+        body: json.encode({
+          'title': title,
+          'category': category,
+          'content': content,
+          'authorName': authorName,
+        }),
+      ).timeout(const Duration(seconds: 3));
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final newStory = Story.fromJson(data);
+        _userCreatedStories.insert(0, newStory);
+        return {'success': true, 'story': newStory};
+      } else {
+        return {'success': false, 'message': data['message'] ?? 'Failed to publish story'};
+      }
+    } catch (e) {
+      final wordsCount = content.trim().split(RegExp(r'\s+')).length;
+      final estReadTime = '${(wordsCount / 150).ceil()} min read';
+
+      final offlineStory = Story(
+        id: 'created_${DateTime.now().millisecondsSinceEpoch}',
+        title: title,
+        category: category,
+        content: content,
+        authorName: authorName,
+        likes: 1,
+        rating: 5.0,
+        chapters: 1,
+        readsCount: '1 read',
+        readTime: estReadTime,
+        createdAt: DateTime.now(),
+      );
+
+      _userCreatedStories.insert(0, offlineStory);
+      return {'success': true, 'story': offlineStory, 'isOffline': true};
+    }
   }
 
   // --- Comments API ---
@@ -146,7 +273,6 @@ class ApiService {
       }
     } catch (_) {}
 
-    // Offline / Fallback dummy comments
     if (!_localCommentsStore.containsKey(storyId)) {
       _localCommentsStore[storyId] = [
         Comment(
@@ -161,7 +287,7 @@ class ApiService {
           id: 'c2',
           storyId: storyId,
           userId: 'u102',
-          userName: 'Julian Vance',
+          userName: 'Januli',
           comment: 'I love how the plot unfolds. Can’t wait for the next chapter update!',
           createdAt: DateTime.now().subtract(const Duration(hours: 1)),
         ),
@@ -195,7 +321,6 @@ class ApiService {
       }
     } catch (_) {}
 
-    // Offline local post comment creation
     final newComment = Comment(
       id: 'c_${DateTime.now().millisecondsSinceEpoch}',
       storyId: storyId,
@@ -211,6 +336,32 @@ class ApiService {
     _localCommentsStore[storyId]!.insert(0, newComment);
 
     return newComment;
+  }
+
+  // --- Delete Comment API ---
+  Future<Map<String, dynamic>> deleteComment({required String commentId, required String storyId}) async {
+    final url = Uri.parse('$baseUrl/comments/$commentId');
+    try {
+      final response = await client.delete(
+        url,
+        headers: {
+          if (authToken != null) 'Authorization': 'Bearer $authToken',
+        },
+      ).timeout(const Duration(seconds: 2));
+
+      if (response.statusCode == 200) {
+        if (_localCommentsStore.containsKey(storyId)) {
+          _localCommentsStore[storyId]!.removeWhere((c) => c.id == commentId);
+        }
+        return {'success': true};
+      }
+    } catch (_) {}
+
+    // Offline fallback comment deletion
+    if (_localCommentsStore.containsKey(storyId)) {
+      _localCommentsStore[storyId]!.removeWhere((c) => c.id == commentId);
+    }
+    return {'success': true, 'isOffline': true};
   }
 
   static List<Story> getDummyStories() {

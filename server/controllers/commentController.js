@@ -46,3 +46,24 @@ exports.getCommentsByStoryId = async (req, res) => {
     res.status(500).json({ message: 'Server Error' });
   }
 };
+
+// @route   DELETE /comments/:id
+// @desc    Delete a comment (Protected)
+exports.deleteComment = async (req, res) => {
+  try {
+    const comment = await Comment.findById(req.params.id);
+    if (!comment) {
+      return res.status(404).json({ message: 'Comment not found' });
+    }
+
+    if (comment.userId.toString() !== req.user.id) {
+      return res.status(401).json({ message: 'Not authorized to delete this comment' });
+    }
+
+    await comment.deleteOne();
+    res.json({ message: 'Comment deleted successfully' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};

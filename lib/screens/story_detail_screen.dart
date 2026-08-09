@@ -105,6 +105,78 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
     );
   }
 
+  // --- DELETE COMMENT HANDLER ---
+  Future<void> _confirmDeleteComment(Comment comment) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFFFBF9F5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Delete Comment',
+          style: TextStyle(fontFamily: 'Serif', fontWeight: FontWeight.bold),
+        ),
+        content: const Text('Are you sure you want to delete this comment?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF736860))),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _apiService.deleteComment(commentId: comment.id, storyId: widget.story.id);
+      _loadComments();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Comment deleted')),
+      );
+    }
+  }
+
+  // --- DELETE STORY HANDLER ---
+  Future<void> _confirmDeleteStory() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFFFBF9F5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Delete Story',
+          style: TextStyle(fontFamily: 'Serif', fontWeight: FontWeight.bold),
+        ),
+        content: Text('Are you sure you want to delete "${widget.story.title}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF736860))),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            child: const Text('Delete Story', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _apiService.deleteStory(widget.story.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Story deleted successfully')),
+      );
+      Navigator.pop(context, true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const primaryTerracotta = Color(0xFFB83B00);
@@ -114,10 +186,15 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
     const textColorMuted = Color(0xFF736860);
     const borderColor = Color(0xFFEBE4DC);
 
+    final currentUsername = ApiService.currentUser?.username ?? 'Januli';
+    final isStoryAuthor = widget.story.authorName.toLowerCase() == currentUsername.toLowerCase() ||
+        widget.story.authorName == 'Januli' ||
+        widget.story.id.startsWith('my_') ||
+        widget.story.id.startsWith('created_');
+
     return Scaffold(
       backgroundColor: backgroundColor,
 
-      // App Bar with Bookmark Toggle Icon
       appBar: AppBar(
         backgroundColor: backgroundColor,
         elevation: 0,
@@ -146,6 +223,13 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
             ),
             onPressed: _toggleBookmark,
           ),
+          // Delete Story Button (if Author)
+          if (isStoryAuthor)
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 24),
+              tooltip: 'Delete Story',
+              onPressed: _confirmDeleteStory,
+            ),
           const SizedBox(width: 4),
         ],
       ),
@@ -229,7 +313,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Rating & Actions Row (Star Ratings + Like Button)
+                    // Rating & Actions Row
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
@@ -377,6 +461,9 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                           itemBuilder: (context, index) {
                             final c = comments[index];
                             final initial = c.userName.isNotEmpty ? c.userName[0].toUpperCase() : 'U';
+                            final isCommentAuthor = c.userName.toLowerCase() == currentUsername.toLowerCase() ||
+                                c.userName == 'Januli' ||
+                                c.id.startsWith('c_');
 
                             return Container(
                               padding: const EdgeInsets.all(12),
@@ -416,9 +503,24 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                                                 color: textColorDark,
                                               ),
                                             ),
-                                            Text(
-                                              'Just now',
-                                              style: TextStyle(fontSize: 11, color: textColorMuted.withValues(alpha: 0.8)),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  'Just now',
+                                                  style: TextStyle(fontSize: 11, color: textColorMuted.withValues(alpha: 0.8)),
+                                                ),
+                                                if (isCommentAuthor) ...[
+                                                  const SizedBox(width: 6),
+                                                  GestureDetector(
+                                                    onTap: () => _confirmDeleteComment(c),
+                                                    child: const Icon(
+                                                      Icons.delete_outline_rounded,
+                                                      size: 16,
+                                                      color: Colors.redAccent,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
                                             ),
                                           ],
                                         ),
