@@ -210,6 +210,7 @@ class ApiService {
     required String title,
     required String category,
     required String content,
+    String? coverUrl,
   }) async {
     final url = Uri.parse('$baseUrl/stories');
     final authorName = currentUser?.username ?? 'Januli';
@@ -226,6 +227,7 @@ class ApiService {
           'category': category,
           'content': content,
           'authorName': authorName,
+          if (coverUrl != null && coverUrl.isNotEmpty) 'coverUrl': coverUrl,
         }),
       ).timeout(const Duration(seconds: 3));
 
@@ -248,6 +250,7 @@ class ApiService {
         category: category,
         content: content,
         authorName: authorName,
+        coverUrl: coverUrl,
         likes: 1,
         rating: 5.0,
         chapters: 1,
