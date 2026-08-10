@@ -438,22 +438,27 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 14),
 
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.72,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                        itemCount: allStories.skip(4).length,
-                        itemBuilder: (context, index) {
-                          final story = allStories.skip(4).toList()[index];
-                          return StoryCard(
-                            story: story,
-                            cardType: StoryCardType.recommendation,
-                            onTap: () => _openStoryReader(story),
+                      Builder(
+                        builder: (context) {
+                          final recStories = allStories.length > 4 ? allStories.skip(4).toList() : allStories;
+                          return GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.72,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                            ),
+                            itemCount: recStories.length,
+                            itemBuilder: (context, index) {
+                              final story = recStories[index];
+                              return StoryCard(
+                                story: story,
+                                cardType: StoryCardType.recommendation,
+                                onTap: () => _openStoryReader(story),
+                              );
+                            },
                           );
                         },
                       ),

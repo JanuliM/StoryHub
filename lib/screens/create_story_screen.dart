@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../widgets/story_card.dart';
 
 class CreateStoryScreen extends StatefulWidget {
   const CreateStoryScreen({super.key});
@@ -11,6 +12,7 @@ class CreateStoryScreen extends StatefulWidget {
 class _CreateStoryScreenState extends State<CreateStoryScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
+  final _coverUrlController = TextEditingController();
   final _contentController = TextEditingController();
   final ApiService _apiService = ApiService();
 
@@ -30,9 +32,18 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
     'Literary',
   ];
 
+  // Preset sample cover images for convenience
+  final Map<String, String> _sampleCovers = {
+    'Fantasy Castle': 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80',
+    'Enchanted Forest': 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=600&q=80',
+    'Sci-Fi Galaxy': 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=600&q=80',
+    'Cozy Library': 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=600&q=80',
+  };
+
   @override
   void dispose() {
     _titleController.dispose();
+    _coverUrlController.dispose();
     _contentController.dispose();
     super.dispose();
   }
@@ -46,6 +57,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
       title: _titleController.text.trim(),
       category: _selectedCategory,
       content: _contentController.text.trim(),
+      coverUrl: _coverUrlController.text.trim().isNotEmpty ? _coverUrlController.text.trim() : null,
     );
 
     setState(() => _isPublishing = false);
@@ -100,7 +112,6 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
           ),
         ),
         actions: [
-          // Publish action button in Top Bar
           Padding(
             padding: const EdgeInsets.only(right: 12.0, top: 10, bottom: 10),
             child: ElevatedButton(
@@ -140,7 +151,6 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header Subtitle
                 const Text(
                   'Share your narrative with the world.',
                   style: TextStyle(
@@ -289,7 +299,118 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                       ),
                       const SizedBox(height: 18),
 
-                      // 3. LARGE MULTI-LINE TEXT AREA FOR STORY CONTENT
+                      // 3. COVER IMAGE PICTURE (URL or Sample Presets)
+                      const Text(
+                        'Cover Picture (Image URL)',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: textColorDark,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _coverUrlController,
+                        style: const TextStyle(fontSize: 13, color: textColorDark),
+                        decoration: InputDecoration(
+                          hintText: 'https://example.com/cover.jpg',
+                          hintStyle: const TextStyle(fontSize: 13, color: Color(0xFFA0968E)),
+                          prefixIcon: const Icon(Icons.image_outlined, color: textColorMuted, size: 20),
+                          suffixIcon: _coverUrlController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 18, color: textColorMuted),
+                                  onPressed: () {
+                                    _coverUrlController.clear();
+                                    setState(() {});
+                                  },
+                                )
+                              : null,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          filled: true,
+                          fillColor: const Color(0xFFFAF7F2),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: borderColor),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: borderColor),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: primaryTerracotta, width: 1.5),
+                          ),
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Cover Preview & Sample Presets Row
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Cover Preview Box
+                          SizedBox(
+                            width: 65,
+                            height: 85,
+                            child: BookCoverWidget(
+                              title: _titleController.text.isNotEmpty ? _titleController.text : 'Cover',
+                              author: 'Preview',
+                              category: _selectedCategory,
+                              coverUrl: _coverUrlController.text.trim().isNotEmpty ? _coverUrlController.text.trim() : null,
+                              height: 85,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Or choose a sample cover photo:',
+                                  style: TextStyle(fontSize: 11, color: textColorMuted),
+                                ),
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: _sampleCovers.entries.map((e) {
+                                    final isSelected = _coverUrlController.text == e.value;
+                                    return GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _coverUrlController.text = e.value;
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: isSelected ? primaryTerracotta : const Color(0xFFFAF7F2),
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: isSelected ? primaryTerracotta : borderColor,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          e.key,
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                            color: isSelected ? Colors.white : textColorDark,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+
+                      // 4. LARGE MULTI-LINE TEXT AREA FOR STORY CONTENT
                       const Text(
                         'Story Content',
                         style: TextStyle(
@@ -348,7 +469,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // 4. MAIN BOTTOM PUBLISH BUTTON
+                // 5. MAIN BOTTOM PUBLISH BUTTON
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
