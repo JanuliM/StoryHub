@@ -128,3 +128,42 @@ exports.deleteStory = async (req, res) => {
     res.status(500).json({ message: 'Server Error' });
   }
 };
+
+// @route   PUT /stories/:id/read
+// @desc    Increment the read count for a story
+exports.incrementReads = async (req, res) => {
+  try {
+    let story = await Story.findById(req.params.id);
+
+    if (!story) {
+      return res.status(404).json({ message: 'Story not found' });
+    }
+
+    story.reads = (story.reads || 0) + 1;
+    await story.save();
+
+    res.json({ message: 'Reads incremented', reads: story.reads });
+  } catch (err) {
+    console.error(err.message);
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ message: 'Story not found' });
+    }
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// @route   GET /stories/trending
+// @desc    Fetch top 10 trending stories based on reads
+exports.getTrendingStories = async (req, res) => {
+  try {
+    const stories = await Story.find()
+      .populate('author', 'username email profileImage')
+      .sort({ reads: -1 })
+      .limit(10);
+
+    res.json(stories);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};

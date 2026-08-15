@@ -33,6 +33,21 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
     _isLiked = false;
     _userStarRating = widget.story.rating;
     _loadComments();
+    _incrementReads();
+    _checkIfBookmarked();
+  }
+
+  void _checkIfBookmarked() async {
+    final status = await _apiService.checkBookmarkStatus(widget.story.id);
+    if (mounted) {
+      setState(() {
+        _isBookmarked = status;
+      });
+    }
+  }
+
+  void _incrementReads() {
+    _apiService.incrementStoryReads(widget.story.id);
   }
 
   @override
@@ -66,17 +81,21 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
     );
   }
 
-  void _toggleBookmark() {
+  void _toggleBookmark() async {
     setState(() {
       _isBookmarked = !_isBookmarked;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_isBookmarked ? 'Saved to your Bookmarks 🔖' : 'Removed from Bookmarks'),
-        duration: const Duration(seconds: 1),
-      ),
-    );
+    final result = await _apiService.toggleBookmark(widget.story.id);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isBookmarked ? 'Saved to your Bookmarks 🔖' : 'Removed from Bookmarks'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    }
   }
 
   Future<void> _handlePostComment() async {
@@ -179,12 +198,13 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const primaryTerracotta = Color(0xFFB83B00);
-    const backgroundColor = Color(0xFFFBF9F5);
-    const cardColor = Colors.white;
-    const textColorDark = Color(0xFF1E1814);
-    const textColorMuted = Color(0xFF736860);
-    const borderColor = Color(0xFFEBE4DC);
+    final backgroundColor = isDark ? const Color(0xFF121212) : const Color(0xFFFBF9F5);
+    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColorDark = isDark ? Colors.white : const Color(0xFF1E1814);
+    final textColorMuted = isDark ? Colors.white70 : const Color(0xFF736860);
+    final borderColor = isDark ? const Color(0xFF333333) : const Color(0xFFEBE4DC);
 
     final currentUsername = ApiService.currentUser?.username ?? 'Januli';
     final isStoryAuthor = widget.story.authorName.toLowerCase() == currentUsername.toLowerCase() ||
@@ -199,14 +219,14 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
         backgroundColor: backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: textColorDark),
+          icon: Icon(Icons.arrow_back, color: textColorDark),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           widget.story.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'Serif',
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -276,11 +296,11 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                         ),
                         Row(
                           children: [
-                            const Icon(Icons.access_time_rounded, size: 14, color: textColorMuted),
+                            Icon(Icons.access_time_rounded, size: 14, color: textColorMuted),
                             const SizedBox(width: 4),
                             Text(
                               widget.story.readTime,
-                              style: const TextStyle(fontSize: 12, color: textColorMuted),
+                              style: TextStyle(fontSize: 12, color: textColorMuted),
                             ),
                           ],
                         ),
@@ -291,7 +311,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                     // Title
                     Text(
                       widget.story.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Serif',
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -304,7 +324,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                     // Author Name
                     Text(
                       'By ${widget.story.authorName}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Serif',
                         fontStyle: FontStyle.italic,
                         fontSize: 15,
@@ -351,7 +371,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                               const SizedBox(width: 8),
                               Text(
                                 '${_userStarRating.toStringAsFixed(1)} / 5.0',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                   color: textColorDark,
@@ -406,11 +426,11 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 32),
-                    const Divider(color: borderColor, thickness: 1),
+                    Divider(color: borderColor, thickness: 1),
                     const SizedBox(height: 20),
 
                     // --- SCROLLABLE COMMENTS SECTION ---
-                    const Row(
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
@@ -446,7 +466,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                           return Container(
                             padding: const EdgeInsets.all(20),
                             alignment: Alignment.center,
-                            child: const Text(
+                            child: Text(
                               'No comments yet. Be the first to share your thoughts!',
                               style: TextStyle(fontSize: 13, color: textColorMuted),
                             ),
@@ -497,7 +517,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                                           children: [
                                             Text(
                                               c.userName,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.bold,
                                                 color: textColorDark,
@@ -569,7 +589,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                     Expanded(
                       child: TextField(
                         controller: _commentController,
-                        style: const TextStyle(fontSize: 14, color: textColorDark),
+                        style: TextStyle(fontSize: 14, color: textColorDark),
                         decoration: InputDecoration(
                           hintText: 'Write a comment...',
                           hintStyle: const TextStyle(fontSize: 13, color: Color(0xFFA0968E)),

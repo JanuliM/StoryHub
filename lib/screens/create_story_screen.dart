@@ -85,12 +85,14 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const primaryTerracotta = Color(0xFFB83B00);
-    const backgroundColor = Color(0xFFFBF9F5);
-    const cardColor = Colors.white;
-    const textColorDark = Color(0xFF1E1814);
-    const textColorMuted = Color(0xFF736860);
-    const borderColor = Color(0xFFEBE4DC);
+    final backgroundColor = isDark ? const Color(0xFF121212) : const Color(0xFFFBF9F5);
+    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColorDark = isDark ? Colors.white : const Color(0xFF1E1814);
+    final textColorMuted = isDark ? Colors.white70 : const Color(0xFF736860);
+    final borderColor = isDark ? const Color(0xFF333333) : const Color(0xFFEBE4DC);
+    final inputFillColor = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFFAF7F2);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -99,10 +101,10 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
         backgroundColor: backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: textColorDark),
+          icon: Icon(Icons.arrow_back, color: textColorDark),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Create Story',
           style: TextStyle(
             fontFamily: 'Serif',
@@ -151,7 +153,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Share your narrative with the world.',
                   style: TextStyle(
                     fontSize: 14,
@@ -179,7 +181,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // 1. TITLE TEXT FIELD
-                      const Text(
+                      Text(
                         'Story Title',
                         style: TextStyle(
                           fontSize: 13,
@@ -190,7 +192,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _titleController,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Serif',
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -205,14 +207,14 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                           ),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           filled: true,
-                          fillColor: const Color(0xFFFAF7F2),
+                          fillColor: inputFillColor,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: borderColor),
+                            borderSide: BorderSide(color: borderColor),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: borderColor),
+                            borderSide: BorderSide(color: borderColor),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -232,7 +234,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                       const SizedBox(height: 18),
 
                       // 2. CATEGORY DROPDOWN
-                      const Text(
+                      Text(
                         'Category',
                         style: TextStyle(
                           fontSize: 13,
@@ -243,20 +245,20 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                       const SizedBox(height: 6),
                       DropdownButtonFormField<String>(
                         initialValue: _selectedCategory,
-                        style: const TextStyle(fontSize: 14, color: textColorDark),
+                        style: TextStyle(fontSize: 14, color: textColorDark),
                         dropdownColor: cardColor,
-                        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: textColorMuted),
+                        icon: Icon(Icons.keyboard_arrow_down_rounded, color: textColorMuted),
                         decoration: InputDecoration(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           filled: true,
-                          fillColor: const Color(0xFFFAF7F2),
+                          fillColor: inputFillColor,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: borderColor),
+                            borderSide: BorderSide(color: borderColor),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: borderColor),
+                            borderSide: BorderSide(color: borderColor),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -279,7 +281,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                                 const SizedBox(width: 10),
                                 Text(
                                   cat,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w500,
                                     color: textColorDark,
@@ -300,7 +302,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                       const SizedBox(height: 18),
 
                       // 3. COVER IMAGE PICTURE (URL or Sample Presets)
-                      const Text(
+                      Text(
                         'Cover Picture (Image URL)',
                         style: TextStyle(
                           fontSize: 13,
@@ -311,14 +313,14 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _coverUrlController,
-                        style: const TextStyle(fontSize: 13, color: textColorDark),
+                        style: TextStyle(fontSize: 13, color: textColorDark),
                         decoration: InputDecoration(
                           hintText: 'https://example.com/cover.jpg',
                           hintStyle: const TextStyle(fontSize: 13, color: Color(0xFFA0968E)),
-                          prefixIcon: const Icon(Icons.image_outlined, color: textColorMuted, size: 20),
+                          prefixIcon: Icon(Icons.image_outlined, color: textColorMuted, size: 20),
                           suffixIcon: _coverUrlController.text.isNotEmpty
                               ? IconButton(
-                                  icon: const Icon(Icons.clear, size: 18, color: textColorMuted),
+                                  icon: Icon(Icons.clear, size: 18, color: textColorMuted),
                                   onPressed: () {
                                     _coverUrlController.clear();
                                     setState(() {});
@@ -327,14 +329,14 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                               : null,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           filled: true,
-                          fillColor: const Color(0xFFFAF7F2),
+                          fillColor: inputFillColor,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: borderColor),
+                            borderSide: BorderSide(color: borderColor),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: borderColor),
+                            borderSide: BorderSide(color: borderColor),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -366,7 +368,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   'Or choose a sample cover photo:',
                                   style: TextStyle(fontSize: 11, color: textColorMuted),
                                 ),
@@ -385,7 +387,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: isSelected ? primaryTerracotta : const Color(0xFFFAF7F2),
+                                          color: isSelected ? primaryTerracotta : inputFillColor,
                                           borderRadius: BorderRadius.circular(12),
                                           border: Border.all(
                                             color: isSelected ? primaryTerracotta : borderColor,
@@ -411,7 +413,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                       const SizedBox(height: 18),
 
                       // 4. LARGE MULTI-LINE TEXT AREA FOR STORY CONTENT
-                      const Text(
+                      Text(
                         'Story Content',
                         style: TextStyle(
                           fontSize: 13,
@@ -425,7 +427,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                         maxLines: 14,
                         minLines: 8,
                         keyboardType: TextInputType.multiline,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Serif',
                           fontSize: 15,
                           height: 1.6,
@@ -440,14 +442,14 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                           ),
                           contentPadding: const EdgeInsets.all(14),
                           filled: true,
-                          fillColor: const Color(0xFFFAF7F2),
+                          fillColor: inputFillColor,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: borderColor),
+                            borderSide: BorderSide(color: borderColor),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: borderColor),
+                            borderSide: BorderSide(color: borderColor),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -492,9 +494,9 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : const Row(
+                        : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
+                            children: const [
                               Icon(Icons.publish_rounded, size: 20),
                               SizedBox(width: 8),
                               Text(

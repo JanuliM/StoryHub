@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../models/story.dart';
 import '../models/user.dart';
 import '../models/comment.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   static String? authToken;
@@ -18,17 +19,41 @@ class ApiService {
     if (kIsWeb) {
       return 'http://localhost:5000';
     }
-    try {
-      if (Platform.isAndroid) {
-        return 'http://10.0.2.2:5000';
-      }
-    } catch (_) {}
-    return 'http://localhost:5000';
+    // Updated to the computer's WiFi IP so your physical device can connect
+    return 'http://10.10.26.189:5000';
   }
 
   final http.Client client;
 
   ApiService({http.Client? client}) : client = client ?? http.Client();
+
+  // --- Initialize Persistent Auth ---
+  Future<void> initAuth() async {
+    final prefs = await SharedPreferences.getInstance();
+    authToken = prefs.getString('auth_token');
+    
+    final userJsonStr = prefs.getString('current_user');
+    if (userJsonStr != null) {
+      try {
+        final userData = json.decode(userJsonStr);
+        currentUser = User.fromJson(userData);
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _saveAuthData(String token, Map<String, dynamic> userData) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('auth_token', token);
+    await prefs.setString('current_user', json.encode(userData));
+  }
+  
+  Future<void> logout() async {
+    authToken = null;
+    currentUser = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
+    await prefs.remove('current_user');
+  }
 
   // --- Auth: Register ---
   Future<Map<String, dynamic>> register({
@@ -54,6 +79,7 @@ class ApiService {
         authToken = data['token'];
         if (data['user'] != null) {
           currentUser = User.fromJson(data['user']);
+          await _saveAuthData(authToken!, data['user']);
         }
         return {'success': true, 'token': authToken, 'user': currentUser};
       } else {
@@ -97,6 +123,7 @@ class ApiService {
         authToken = data['token'];
         if (data['user'] != null) {
           currentUser = User.fromJson(data['user']);
+          await _saveAuthData(authToken!, data['user']);
         }
         return {'success': true, 'token': authToken, 'user': currentUser};
       } else {
@@ -118,6 +145,35 @@ class ApiService {
     }
   }
 
+  // --- Auth: Update Profile Image ---
+  Future<bool> uploadProfileImage(String base64Image) async {
+    if (currentUser == null) return false;
+
+    final url = Uri.parse('$baseUrl/profile-image');
+    try {
+      final response = await client.put(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'userId': currentUser!.id,
+          'base64Image': base64Image,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['user'] != null) {
+          currentUser = User.fromJson(data['user']);
+          if (authToken != null) {
+            await _saveAuthData(authToken!, data['user']);
+          }
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+
   // --- Fetch Stories ---
   Future<List<Story>> fetchStories() async {
     final url = Uri.parse('$baseUrl/stories');
@@ -135,6 +191,36 @@ class ApiService {
 
     return [..._userCreatedStories, ...getDummyStories()];
   }
+
+  // --- Fetch Trending Stories ---
+  Future<List<Story>> fetchTrendingStories() async {
+    final url = Uri.parse('$baseUrl/stories/trending');
+    try {
+      final response = await client.get(url).timeout(const Duration(seconds: 3));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (data.isNotEmpty) {
+          return data.map((item) => Story.fromJson(item)).toList();
+        }
+      }
+    } catch (_) {}
+
+    // Fallback if backend is down or no real stories yet
+    return getDummyStories().take(2).toList();
+  }
+
+  // --- Increment Reads Count ---
+  Future<void> incrementStoryReads(String storyId) async {
+    // If it's a dummy story with a numeric ID, we don't try to increment it on backend
+    if (storyId.length < 10) return; 
+    
+    final url = Uri.parse('$baseUrl/stories/$storyId/read');
+    try {
+      await client.put(url).timeout(const Duration(seconds: 3));
+    } catch (_) {}
+  }
+
 
   // --- Delete Story API ---
   Future<Map<String, dynamic>> deleteStory(String storyId) async {
@@ -201,8 +287,73 @@ class ApiService {
   }
 
   Future<List<Story>> fetchBookmarkedStories() async {
+    final url = Uri.parse('$baseUrl/bookmark');
+    try {
+      final response = await client.get(
+        url,
+        headers: {
+          if (authToken != null) 'Authorization': 'Bearer $authToken',
+        },
+      ).timeout(const Duration(seconds: 3));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (data.isNotEmpty) {
+          // The backend returns an array of Bookmarks. Each bookmark has a populated 'storyId' field
+          return data
+              .where((item) => item['storyId'] != null)
+              .map((item) => Story.fromJson(item['storyId']))
+              .toList();
+        }
+        return [];
+      }
+    } catch (_) {}
+
+    // Fallback if offline
     final all = await fetchStories();
     return all.skip(2).take(4).toList();
+  }
+
+  // --- Check Bookmark Status API ---
+  Future<bool> checkBookmarkStatus(String storyId) async {
+    final url = Uri.parse('$baseUrl/bookmark/check/$storyId');
+    try {
+      final response = await client.get(
+        url,
+        headers: {
+          if (authToken != null) 'Authorization': 'Bearer $authToken',
+        },
+      ).timeout(const Duration(seconds: 3));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['bookmarked'] ?? false;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  // --- Toggle Bookmark API ---
+  Future<Map<String, dynamic>> toggleBookmark(String storyId) async {
+    // Skip if it's a dummy story
+    if (storyId.length < 10) return {'success': true};
+
+    final url = Uri.parse('$baseUrl/bookmark');
+    try {
+      final response = await client.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (authToken != null) 'Authorization': 'Bearer $authToken',
+        },
+        body: json.encode({'storyId': storyId}),
+      ).timeout(const Duration(seconds: 3));
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {'success': true, 'data': json.decode(response.body)};
+      }
+    } catch (_) {}
+    return {'success': false};
   }
 
   // --- Create / Publish Story API ---

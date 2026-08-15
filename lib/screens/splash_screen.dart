@@ -1,5 +1,5 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -33,11 +33,23 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    Timer(const Duration(seconds: 3), () {
-      if (mounted) {
+    _initializeAndNavigate();
+  }
+
+  Future<void> _initializeAndNavigate() async {
+    // Wait for 3 seconds and initialize auth concurrently
+    await Future.wait([
+      Future.delayed(const Duration(seconds: 3)),
+      ApiService().initAuth(),
+    ]);
+
+    if (mounted) {
+      if (ApiService.authToken != null && ApiService.currentUser != null) {
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
         Navigator.pushReplacementNamed(context, '/login');
       }
-    });
+    }
   }
 
   @override
@@ -48,8 +60,11 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const primaryColor = Color(0xFFA43A14);
-    const backgroundColor = Color(0xFFFAF7F2);
+    final backgroundColor = isDark ? const Color(0xFF121212) : const Color(0xFFFAF7F2);
+    final textColorDark = isDark ? Colors.white : const Color(0xFF2D241E);
+    final textColorMuted = isDark ? Colors.white70 : const Color(0xFF7A6E65);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -82,23 +97,23 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                   const SizedBox(height: 28),
                   // Title
-                  const Text(
+                  Text(
                     'StoryHub',
                     style: TextStyle(
                       fontFamily: 'Serif',
                       fontSize: 40,
                       fontWeight: FontWeight.bold,
                       letterSpacing: -0.5,
-                      color: Color(0xFF2D241E),
+                      color: textColorDark,
                     ),
                   ),
                   const SizedBox(height: 10),
                   // Subtitle
-                  const Text(
+                  Text(
                     'Collect memories, craft narratives.',
                     style: TextStyle(
                       fontSize: 15,
-                      color: Color(0xFF7A6E65),
+                      color: textColorMuted,
                       letterSpacing: 0.2,
                     ),
                   ),

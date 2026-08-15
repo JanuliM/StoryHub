@@ -55,7 +55,9 @@ class Story {
       likes: (json['likes'] is num) ? (json['likes'] as num).toInt() : 120,
       rating: (json['rating'] is num) ? (json['rating'] as num).toDouble() : 4.8,
       chapters: (json['chapters'] is num) ? (json['chapters'] as num).toInt() : 12,
-      readsCount: json['readsCount'] as String? ?? '10k reads',
+      readsCount: json['reads'] != null 
+          ? '${json['reads']} reads'
+          : (json['readsCount'] as String? ?? '10k reads'),
       coverUrl: json['coverUrl'] as String?,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())

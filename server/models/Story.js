@@ -29,6 +29,10 @@ const StorySchema = new mongoose.Schema(
       type: String,
       default: '5 min read',
     },
+    reads: {
+      type: Number,
+      default: 0,
+    },
     likes: {
       type: Number,
       default: 0,

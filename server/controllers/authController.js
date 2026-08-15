@@ -119,3 +119,35 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ message: 'Server Error' });
   }
 };
+
+// @route   PUT /profile-image
+// @desc    Update user profile image
+exports.uploadProfileImage = async (req, res) => {
+  const { userId, base64Image } = req.body;
+  if (!userId || !base64Image) {
+    return res.status(400).json({ message: 'User ID and Image are required' });
+  }
+  
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    user.profileImage = base64Image;
+    await user.save();
+    
+    res.json({
+      message: 'Profile image updated',
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        profileImage: user.profileImage,
+      },
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};

@@ -5,6 +5,7 @@ import '../widgets/story_card.dart';
 import 'story_detail_screen.dart';
 import 'create_story_screen.dart';
 import 'profile_screen.dart';
+import '../main.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   
   late Future<List<Story>> _storiesFuture;
+  late Future<List<Story>> _trendingStoriesFuture;
   int _currentBottomNavIndex = 0;
   String _selectedCategory = 'All';
   String _searchQuery = '';
@@ -48,12 +50,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void _loadStories() {
     setState(() {
       _storiesFuture = _apiService.fetchStories();
+      _trendingStoriesFuture = _apiService.fetchTrendingStories();
     });
   }
 
   Future<void> _handleRefresh() async {
     _loadStories();
-    await _storiesFuture.catchError((_) => <Story>[]);
+    await Future.wait([
+      _storiesFuture.catchError((_) => <Story>[]),
+      _trendingStoriesFuture.catchError((_) => <Story>[]),
+    ]);
   }
 
   void _openStoryReader(Story story) {
@@ -117,11 +123,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const primaryTerracotta = Color(0xFFB83B00);
-    const backgroundColor = Color(0xFFFBF9F5);
-    const textColorDark = Color(0xFF1E1814);
-    const textColorMuted = Color(0xFF736860);
-    const borderColor = Color(0xFFEBE4DC);
+    final backgroundColor = isDark ? const Color(0xFF121212) : const Color(0xFFFBF9F5);
+    final textColorDark = isDark ? Colors.white : const Color(0xFF1E1814);
+    final textColorMuted = isDark ? Colors.white70 : const Color(0xFF736860);
+    final borderColor = isDark ? const Color(0xFF333333) : const Color(0xFFEBE4DC);
+    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -147,11 +155,17 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
+            icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode, color: textColorDark, size: 22),
+            onPressed: () {
+              themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.notifications_none_outlined, color: primaryTerracotta, size: 22),
             onPressed: () {},
           ),
           IconButton(
-            icon: const Icon(Icons.person_outline_rounded, color: textColorDark, size: 24),
+            icon: Icon(Icons.person_outline_rounded, color: textColorDark, size: 24),
             onPressed: _openProfile,
           ),
           const SizedBox(width: 4),
@@ -161,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           color: primaryTerracotta,
-          backgroundColor: Colors.white,
+          backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
           onRefresh: _handleRefresh,
           child: FutureBuilder<List<Story>>(
             future: _storiesFuture,
@@ -187,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     // --- 1. SEARCH BAR COMPONENT ---
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: cardColor,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: borderColor),
                         boxShadow: [
@@ -201,12 +215,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       child: Row(
                         children: [
-                          const Icon(Icons.search, color: textColorMuted, size: 20),
+                          Icon(Icons.search, color: textColorMuted, size: 20),
                           const SizedBox(width: 10),
                           Expanded(
                             child: TextField(
                               controller: _searchController,
-                              style: const TextStyle(fontSize: 14, color: textColorDark),
+                              style: TextStyle(fontSize: 14, color: textColorDark),
                               decoration: const InputDecoration(
                                 hintText: 'Search stories by title, author, or keyword...',
                                 hintStyle: TextStyle(fontSize: 13, color: Color(0xFFA0968E)),
@@ -229,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   _searchQuery = '';
                                 });
                               },
-                              child: const Icon(Icons.close, color: textColorMuted, size: 18),
+                              child: Icon(Icons.close, color: textColorMuted, size: 18),
                             ),
                         ],
                       ),
@@ -252,7 +266,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               label: Text(category),
                               selected: isSelected,
                               selectedColor: primaryTerracotta,
-                              backgroundColor: Colors.white,
+                              backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                               side: BorderSide(
                                 color: isSelected ? primaryTerracotta : borderColor,
                                 width: 1,
@@ -284,7 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Text(
                             'Results (${filteredStories.length})',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Serif',
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -312,9 +326,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
                           alignment: Alignment.center,
-                          child: const Column(
+                          child: Column(
                             children: [
-                              Text('📖', style: TextStyle(fontSize: 48)),
+                              const Text('📖', style: TextStyle(fontSize: 48)),
                               SizedBox(height: 12),
                               Text(
                                 'No stories found',
@@ -361,7 +375,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Continue Reading',
                             style: TextStyle(
                               fontFamily: 'Serif',
@@ -403,7 +417,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 28),
 
                       // Trending Stories
-                      const Text(
+                      Text(
                         'Trending Stories',
                         style: TextStyle(
                           fontFamily: 'Serif',
@@ -413,21 +427,42 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      ...allStories.skip(2).take(2).toList().asMap().entries.map((entry) {
-                        final rank = entry.key + 1;
-                        final story = entry.value;
+                      FutureBuilder<List<Story>>(
+                        future: _trendingStoriesFuture,
+                        builder: (context, trendingSnapshot) {
+                          if (trendingSnapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(20.0),
+                                child: CircularProgressIndicator(color: primaryTerracotta),
+                              ),
+                            );
+                          } else if (trendingSnapshot.hasError || !trendingSnapshot.hasData || trendingSnapshot.data!.isEmpty) {
+                            return Center(
+                              child: Text('No trending stories right now.', style: TextStyle(color: textColorMuted)),
+                            );
+                          }
 
-                        return StoryCard(
-                          story: story,
-                          cardType: StoryCardType.trending,
-                          trendingRank: rank,
-                          onTap: () => _openStoryReader(story),
-                        );
-                      }),
+                          final trendingStories = trendingSnapshot.data!;
+                          return Column(
+                            children: trendingStories.take(3).toList().asMap().entries.map((entry) {
+                              final rank = entry.key + 1;
+                              final story = entry.value;
+
+                              return StoryCard(
+                                story: story,
+                                cardType: StoryCardType.trending,
+                                trendingRank: rank,
+                                onTap: () => _openStoryReader(story),
+                              );
+                            }).toList(),
+                          );
+                        },
+                      ),
                       const SizedBox(height: 28),
 
                       // Recommendations for You
-                      const Text(
+                      Text(
                         'Recommendations for You',
                         style: TextStyle(
                           fontFamily: 'Serif',
@@ -489,7 +524,7 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _currentBottomNavIndex,
         selectedItemColor: primaryTerracotta,
         unselectedItemColor: textColorMuted,
-        backgroundColor: const Color(0xFFFAF7F2),
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFAF7F2),
         type: BottomNavigationBarType.fixed,
         elevation: 8,
         selectedLabelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),

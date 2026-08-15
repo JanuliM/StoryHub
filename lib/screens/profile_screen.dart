@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 import '../models/story.dart';
 import '../services/api_service.dart';
 import '../widgets/story_card.dart';
@@ -19,6 +21,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late Future<List<Story>> _bookmarkedStoriesFuture;
   late Future<List<Story>> _myStoriesFuture;
 
+  int _storyCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -29,7 +33,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       _likedStoriesFuture = _apiService.fetchLikedStories();
       _bookmarkedStoriesFuture = _apiService.fetchBookmarkedStories();
-      _myStoriesFuture = _apiService.fetchUserStories();
+      _myStoriesFuture = _apiService.fetchUserStories().then((stories) {
+        if (mounted) {
+          setState(() => _storyCount = stories.length);
+        }
+        return stories;
+      });
     });
   }
 
@@ -94,18 +103,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
+    
+    if (pickedFile != null) {
+      setState(() {
+        // Show loading state if needed, here we just eagerly upload
+      });
+      final bytes = await pickedFile.readAsBytes();
+      final base64String = base64Encode(bytes);
+      
+      final success = await _apiService.uploadProfileImage(base64String);
+      if (success && mounted) {
+        setState(() {}); // Refresh UI with new image
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile picture updated'), backgroundColor: Color(0xFFB83B00)),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update picture'), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const primaryTerracotta = Color(0xFFB83B00);
-    const backgroundColor = Color(0xFFFBF9F5);
-    const cardColor = Colors.white;
-    const textColorDark = Color(0xFF1E1814);
-    const textColorMuted = Color(0xFF736860);
-    const borderColor = Color(0xFFEBE4DC);
+    final backgroundColor = isDark ? const Color(0xFF121212) : const Color(0xFFFBF9F5);
+    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColorDark = isDark ? Colors.white : const Color(0xFF1E1814);
+    final textColorMuted = isDark ? Colors.white70 : const Color(0xFF736860);
+    final borderColor = isDark ? const Color(0xFF333333) : const Color(0xFFEBE4DC);
 
     final username = ApiService.currentUser?.username ?? 'Januli';
     final email = ApiService.currentUser?.email ?? 'januli@gmail.com';
     final userInitial = username.isNotEmpty ? username[0].toUpperCase() : 'J';
+    final profileImageBase64 = ApiService.currentUser?.profileImage ?? '';
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -114,11 +150,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: textColorDark),
+          icon: Icon(Icons.arrow_back, color: textColorDark),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Profile & Library',
+        title: Text(
+          'Profile',
           style: TextStyle(
             fontFamily: 'Serif',
             fontSize: 20,
@@ -128,7 +164,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined, color: textColorDark),
+            icon: Icon(Icons.settings_outlined, color: textColorDark),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Settings opened')),
@@ -150,38 +186,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       // --- USER AVATAR & HEADER ---
                       Center(
-                        child: Stack(
-                          alignment: Alignment.bottomRight,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(3),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(color: primaryTerracotta, width: 2),
-                              ),
-                              child: CircleAvatar(
-                                radius: 42,
-                                backgroundColor: primaryTerracotta.withValues(alpha: 0.12),
-                                child: Text(
-                                  userInitial,
-                                  style: const TextStyle(
-                                    fontFamily: 'Serif',
-                                    fontSize: 36,
-                                    fontWeight: FontWeight.bold,
-                                    color: primaryTerracotta,
-                                  ),
+                        child: GestureDetector(
+                          onTap: _pickAndUploadImage,
+                          child: Stack(
+                            alignment: Alignment.bottomRight,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: primaryTerracotta, width: 2),
+                                ),
+                                child: CircleAvatar(
+                                  radius: 42,
+                                  backgroundColor: primaryTerracotta.withValues(alpha: 0.12),
+                                  backgroundImage: profileImageBase64.isNotEmpty
+                                      ? MemoryImage(base64Decode(profileImageBase64))
+                                      : null,
+                                  child: profileImageBase64.isEmpty
+                                      ? Text(
+                                          userInitial,
+                                          style: const TextStyle(
+                                            fontFamily: 'Serif',
+                                            fontSize: 36,
+                                            fontWeight: FontWeight.bold,
+                                            color: primaryTerracotta,
+                                          ),
+                                        )
+                                      : null,
                                 ),
                               ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(
-                                color: primaryTerracotta,
-                                shape: BoxShape.circle,
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: primaryTerracotta,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.camera_alt_rounded, size: 14, color: Colors.white),
                               ),
-                              child: const Icon(Icons.edit_rounded, size: 14, color: Colors.white),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -189,9 +233,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       // User Display Name & Handle
                       Text(
                         username,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Serif',
-                          fontSize: 24,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: textColorDark,
                         ),
@@ -199,8 +243,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 2),
                       Text(
                         '@${username.toLowerCase()} • $email',
-                        style: const TextStyle(
-                          fontSize: 13,
+                        style: TextStyle(
+                          fontSize: 14,
                           color: textColorMuted,
                         ),
                       ),
@@ -239,11 +283,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _buildStatItem('Stories', '12'),
+                            _buildStatItem('Stories', '$_storyCount'),
                             Container(width: 1, height: 28, color: borderColor),
-                            _buildStatItem('Followers', '1.4k'),
+                            _buildStatItem('Followers', '0'),
                             Container(width: 1, height: 28, color: borderColor),
-                            _buildStatItem('Likes Received', '3.8k'),
+                            _buildStatItem('Likes Received', '0'),
                           ],
                         ),
                       ),
@@ -262,7 +306,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 // TabBar
                 Container(
                   color: backgroundColor,
-                  child: const TabBar(
+                  child: TabBar(
                     indicatorColor: primaryTerracotta,
                     indicatorWeight: 2.5,
                     labelColor: primaryTerracotta,
