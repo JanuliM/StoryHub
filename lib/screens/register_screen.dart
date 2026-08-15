@@ -72,12 +72,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const primaryTerracotta = Color(0xFFB83B00);
-    const backgroundColor = Color(0xFFFBF9F5);
-    const cardColor = Color(0xFFF6F3EE);
-    const textColorDark = Color(0xFF1E1814);
-    const textColorMuted = Color(0xFF736860);
-    const borderColor = Color(0xFFEBE5DF);
+    final backgroundColor = isDark ? const Color(0xFF121212) : const Color(0xFFFBF9F5);
+    final cardColor = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF6F3EE);
+    final textColorDark = isDark ? Colors.white : const Color(0xFF1E1814);
+    final textColorMuted = isDark ? Colors.white70 : const Color(0xFF736860);
+    final borderColor = isDark ? const Color(0xFF333333) : const Color(0xFFEBE5DF);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -104,7 +105,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 10),
 
                   // Main Heading
-                  const Text(
+                  Text(
                     'Create Your Account',
                     textAlign: TextAlign.center,
                     style: TextStyle(
@@ -118,7 +119,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 6),
 
                   // Subtitle
-                  const Text(
+                  Text(
                     'Join the community of readers and writers.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
@@ -149,7 +150,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           // Full Name Label & Field
-                          const Text(
+                          Text(
                             'Full Name',
                             style: TextStyle(
                               fontSize: 13,
@@ -160,7 +161,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           const SizedBox(height: 4),
                           TextFormField(
                             controller: _fullNameController,
-                            style: const TextStyle(fontSize: 14, color: textColorDark),
+                            style: TextStyle(fontSize: 14, color: textColorDark),
                             decoration: const InputDecoration(
                               hintText: 'Jane Austen',
                               hintStyle: TextStyle(color: Color(0xFFAAA097), fontSize: 14),
@@ -186,7 +187,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           const SizedBox(height: 18),
 
                           // Email Label & Field
-                          const Text(
+                          Text(
                             'Email',
                             style: TextStyle(
                               fontSize: 13,
@@ -198,7 +199,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
-                            style: const TextStyle(fontSize: 14, color: textColorDark),
+                            style: TextStyle(fontSize: 14, color: textColorDark),
                             decoration: const InputDecoration(
                               hintText: 'jane@example.com',
                               hintStyle: TextStyle(color: Color(0xFFAAA097), fontSize: 14),
@@ -227,7 +228,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           const SizedBox(height: 18),
 
                           // Password Label & Field
-                          const Text(
+                          Text(
                             'Password',
                             style: TextStyle(
                               fontSize: 13,
@@ -239,7 +240,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
-                            style: const TextStyle(fontSize: 14, color: textColorDark),
+                            style: TextStyle(fontSize: 14, color: textColorDark),
                             decoration: InputDecoration(
                               hintText: '••••••••',
                               hintStyle: const TextStyle(color: Color(0xFFAAA097), fontSize: 14),
@@ -301,13 +302,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               Expanded(
                                 child: Wrap(
                                   children: [
-                                    const Text(
-                                      'I agree to the ',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: textColorDark,
+                                    Text(
+                                        'I agree to the ',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: textColorDark,
+                                        ),
                                       ),
-                                    ),
                                     GestureDetector(
                                       onTap: () {},
                                       child: const Text(
@@ -319,13 +320,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         ),
                                       ),
                                     ),
-                                    const Text(
-                                      ' and ',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: textColorDark,
+                                      Text(
+                                        ' and ',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: textColorDark,
+                                        ),
                                       ),
-                                    ),
                                     GestureDetector(
                                       onTap: () {},
                                       child: const Text(
@@ -401,7 +402,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 child: OutlinedButton(
                                   onPressed: () {},
                                   style: OutlinedButton.styleFrom(
-                                    backgroundColor: Colors.white,
+                                    backgroundColor: cardColor,
                                     padding: const EdgeInsets.symmetric(vertical: 11),
                                     side: const BorderSide(color: Color(0xFFE2DCDB)),
                                     shape: RoundedRectangleBorder(
@@ -409,11 +410,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     ),
                                     foregroundColor: textColorDark,
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Icon(Icons.login_rounded, size: 18, color: textColorDark),
-                                      SizedBox(width: 8),
+                                      const SizedBox(width: 8),
                                       Text(
                                         'Google',
                                         style: TextStyle(
@@ -430,7 +431,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 child: OutlinedButton(
                                   onPressed: () {},
                                   style: OutlinedButton.styleFrom(
-                                    backgroundColor: Colors.white,
+                                    backgroundColor: cardColor,
                                     padding: const EdgeInsets.symmetric(vertical: 11),
                                     side: const BorderSide(color: Color(0xFFE2DCDB)),
                                     shape: RoundedRectangleBorder(
@@ -438,11 +439,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     ),
                                     foregroundColor: textColorDark,
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Icon(Icons.apple, size: 20, color: textColorDark),
-                                      SizedBox(width: 6),
+                                      const SizedBox(width: 6),
                                       Text(
                                         'Apple',
                                         style: TextStyle(
@@ -466,7 +467,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
+                      Text(
                         "Already have an account? ",
                         style: TextStyle(
                           fontSize: 13,

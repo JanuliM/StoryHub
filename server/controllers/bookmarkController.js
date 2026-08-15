@@ -38,6 +38,21 @@ exports.toggleBookmark = async (req, res) => {
   }
 };
 
+// @route   GET /bookmark/check/:storyId
+// @desc    Check if a story is bookmarked by the user (Protected)
+exports.checkBookmark = async (req, res) => {
+  try {
+    const existingBookmark = await Bookmark.findOne({
+      userId: req.user.id,
+      storyId: req.params.storyId,
+    });
+    return res.json({ bookmarked: !!existingBookmark });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
 // @route   GET /bookmark
 // @desc    Get user's bookmarked stories (Protected)
 exports.getUserBookmarks = async (req, res) => {

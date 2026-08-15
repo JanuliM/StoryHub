@@ -154,43 +154,59 @@ class BookCoverWidget extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: EdgeInsets.all(height > 120 ? 12.0 : 4.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Icon(
                   centerIcon,
-                  size: height > 120 ? 38 : 26,
+                  size: height > 120 ? 38 : (height > 80 ? 26 : 18),
                   color: accentColor,
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: height > 120 ? 8 : 4),
                 Text(
                   title.toUpperCase(),
                   textAlign: TextAlign.center,
-                  maxLines: 2,
+                  maxLines: height > 80 ? 2 : 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontFamily: 'Serif',
-                    fontSize: height > 120 ? 12 : 10,
+                    fontSize: height > 120 ? 12 : 9,
                     fontWeight: FontWeight.bold,
                     color: textColor,
                     letterSpacing: 0.8,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 2,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'By $author',
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'Serif',
-                    fontStyle: FontStyle.italic,
-                    fontSize: height > 120 ? 10 : 8,
-                    color: subtextColor,
+                if (height > 100) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'By $author',
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'Serif',
+                      fontStyle: FontStyle.italic,
+                      fontSize: 10,
+                      color: subtextColor,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: 2,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -218,10 +234,12 @@ class StoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const primaryTerracotta = Color(0xFFB83B00);
-    const textColorDark = Color(0xFF1E1814);
-    const textColorMuted = Color(0xFF736860);
-    const borderColor = Color(0xFFEBE4DC);
+    final textColorDark = isDark ? Colors.white : const Color(0xFF1E1814);
+    final textColorMuted = isDark ? Colors.white70 : const Color(0xFF736860);
+    final borderColor = isDark ? const Color(0xFF333333) : const Color(0xFFEBE4DC);
+    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
 
     // 1. CONTINUE READING CARD (Horizontal Carousel)
     if (cardType == StoryCardType.continueReading) {
@@ -229,7 +247,7 @@ class StoryCard extends StatelessWidget {
         width: 210,
         margin: const EdgeInsets.only(right: 14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: borderColor),
           boxShadow: [
@@ -302,7 +320,7 @@ class StoryCard extends StatelessWidget {
                   story.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Serif',
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
@@ -316,7 +334,7 @@ class StoryCard extends StatelessWidget {
                   'by ${story.authorName}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     color: textColorMuted,
                   ),
@@ -330,7 +348,7 @@ class StoryCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       '${story.rating}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: textColorDark,
@@ -350,7 +368,7 @@ class StoryCard extends StatelessWidget {
       return Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: borderColor),
           boxShadow: [
@@ -425,7 +443,7 @@ class StoryCard extends StatelessWidget {
                         story.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Serif',
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -437,7 +455,7 @@ class StoryCard extends StatelessWidget {
 
                       Text(
                         '${story.authorName} • ${story.readsCount}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           color: textColorMuted,
                         ),
@@ -450,19 +468,19 @@ class StoryCard extends StatelessWidget {
                           const SizedBox(width: 3),
                           Text(
                             '${story.rating}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: textColorDark,
-                            ),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: textColorDark,
+                              ),
                           ),
                           const SizedBox(width: 14),
                           Text(
                             '${story.chapters} chapters',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: textColorMuted,
-                            ),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: textColorMuted,
+                              ),
                           ),
                         ],
                       ),
@@ -479,7 +497,7 @@ class StoryCard extends StatelessWidget {
     // 3. RECOMMENDATIONS CARD (2-Column Grid Item)
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: borderColor),
         boxShadow: [
@@ -514,7 +532,7 @@ class StoryCard extends StatelessWidget {
                 story.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Serif',
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -527,7 +545,7 @@ class StoryCard extends StatelessWidget {
                 story.authorName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   color: textColorMuted,
                 ),
@@ -543,7 +561,7 @@ class StoryCard extends StatelessWidget {
                       const SizedBox(width: 3),
                       Text(
                         '${story.rating}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: textColorDark,
