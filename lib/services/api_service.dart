@@ -136,6 +136,36 @@ class ApiService {
     return [..._userCreatedStories, ...getDummyStories()];
   }
 
+  // --- Fetch Trending Stories ---
+  Future<List<Story>> fetchTrendingStories() async {
+    final url = Uri.parse('$baseUrl/stories/trending');
+    try {
+      final response = await client.get(url).timeout(const Duration(seconds: 3));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (data.isNotEmpty) {
+          return data.map((item) => Story.fromJson(item)).toList();
+        }
+      }
+    } catch (_) {}
+
+    // Fallback if backend is down or no real stories yet
+    return getDummyStories().take(2).toList();
+  }
+
+  // --- Increment Reads Count ---
+  Future<void> incrementStoryReads(String storyId) async {
+    // If it's a dummy story with a numeric ID, we don't try to increment it on backend
+    if (storyId.length < 10) return; 
+    
+    final url = Uri.parse('$baseUrl/stories/$storyId/read');
+    try {
+      await client.put(url).timeout(const Duration(seconds: 3));
+    } catch (_) {}
+  }
+
+
   // --- Delete Story API ---
   Future<Map<String, dynamic>> deleteStory(String storyId) async {
     final url = Uri.parse('$baseUrl/stories/$storyId');

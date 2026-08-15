@@ -33,6 +33,11 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
     _isLiked = false;
     _userStarRating = widget.story.rating;
     _loadComments();
+    _incrementReads();
+  }
+
+  void _incrementReads() {
+    _apiService.incrementStoryReads(widget.story.id);
   }
 
   @override

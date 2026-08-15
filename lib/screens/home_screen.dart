@@ -18,6 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   
   late Future<List<Story>> _storiesFuture;
+  late Future<List<Story>> _trendingStoriesFuture;
   int _currentBottomNavIndex = 0;
   String _selectedCategory = 'All';
   String _searchQuery = '';
@@ -48,12 +49,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void _loadStories() {
     setState(() {
       _storiesFuture = _apiService.fetchStories();
+      _trendingStoriesFuture = _apiService.fetchTrendingStories();
     });
   }
 
   Future<void> _handleRefresh() async {
     _loadStories();
-    await _storiesFuture.catchError((_) => <Story>[]);
+    await Future.wait([
+      _storiesFuture.catchError((_) => <Story>[]),
+      _trendingStoriesFuture.catchError((_) => <Story>[]),
+    ]);
   }
 
   void _openStoryReader(Story story) {
@@ -413,17 +418,38 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      ...allStories.skip(2).take(2).toList().asMap().entries.map((entry) {
-                        final rank = entry.key + 1;
-                        final story = entry.value;
+                      FutureBuilder<List<Story>>(
+                        future: _trendingStoriesFuture,
+                        builder: (context, trendingSnapshot) {
+                          if (trendingSnapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(20.0),
+                                child: CircularProgressIndicator(color: primaryTerracotta),
+                              ),
+                            );
+                          } else if (trendingSnapshot.hasError || !trendingSnapshot.hasData || trendingSnapshot.data!.isEmpty) {
+                            return const Center(
+                              child: Text('No trending stories right now.', style: TextStyle(color: textSecondary)),
+                            );
+                          }
 
-                        return StoryCard(
-                          story: story,
-                          cardType: StoryCardType.trending,
-                          trendingRank: rank,
-                          onTap: () => _openStoryReader(story),
-                        );
-                      }),
+                          final trendingStories = trendingSnapshot.data!;
+                          return Column(
+                            children: trendingStories.take(3).toList().asMap().entries.map((entry) {
+                              final rank = entry.key + 1;
+                              final story = entry.value;
+
+                              return StoryCard(
+                                story: story,
+                                cardType: StoryCardType.trending,
+                                trendingRank: rank,
+                                onTap: () => _openStoryReader(story),
+                              );
+                            }).toList(),
+                          );
+                        },
+                      ),
                       const SizedBox(height: 28),
 
                       // Recommendations for You
