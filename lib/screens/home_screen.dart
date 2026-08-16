@@ -5,6 +5,7 @@ import '../widgets/story_card.dart';
 import 'story_detail_screen.dart';
 import 'create_story_screen.dart';
 import 'profile_screen.dart';
+import 'library_screen.dart';
 import '../main.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -89,6 +90,15 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => const ProfileScreen(),
+      ),
+    );
+  }
+
+  void _openLibrary() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const LibraryScreen(),
       ),
     );
   }
@@ -188,7 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               }
 
-              final allStories = snapshot.data ?? ApiService.getDummyStories();
+              final allStories = snapshot.data ?? [];
               final filteredStories = _filterStories(allStories);
               final isFilteringActive = _selectedCategory != 'All' || _searchQuery.isNotEmpty;
 
@@ -533,7 +543,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (index == 2) {
             _openCreateStory();
           } else if (index == 3) {
-            _openProfile();
+            _openLibrary();
           } else {
             setState(() => _currentBottomNavIndex = index);
           }

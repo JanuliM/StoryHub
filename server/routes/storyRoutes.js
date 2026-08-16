@@ -8,6 +8,7 @@ const {
   deleteStory,
   getTrendingStories,
   incrementReads,
+  continueStory
 } = require('../controllers/storyController');
 const auth = require('../middleware/auth');
 
@@ -23,5 +24,7 @@ router.get('/:id', getStoryById);
 router.put('/:id/read', incrementReads);
 router.put('/:id', auth, updateStory);
 router.delete('/:id', auth, deleteStory);
+
+router.post('/ai-continue', auth, continueStory);
 
 module.exports = router;
