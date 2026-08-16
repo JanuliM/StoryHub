@@ -3,6 +3,12 @@
 StoryHub is a premium, beautifully crafted mobile application for sharing and reading stories. The application is built with a cross-platform Flutter frontend and a secure Node.js, Express, and Mongoose (MongoDB) backend service.
 
 ---
+## 🎥 Project Demo
+
+
+https://github.com/user-attachments/assets/de00e48d-d332-4332-b2a9-3e0954a164e4
+
+
 
 ## Project Structure 📁
 
