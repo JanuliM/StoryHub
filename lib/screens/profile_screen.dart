@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import '../models/story.dart';
+import '../models/user.dart';
 import '../services/api_service.dart';
 import '../widgets/story_card.dart';
 import 'story_detail_screen.dart';
 import 'create_story_screen.dart';
+import 'edit_profile_screen.dart';
+import 'follow_list_screen.dart';
+import 'author_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -17,11 +21,23 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final ApiService _apiService = ApiService();
 
-  late Future<List<Story>> _likedStoriesFuture;
-  late Future<List<Story>> _bookmarkedStoriesFuture;
+  late Future<List<User>> _followersFuture;
   late Future<List<Story>> _myStoriesFuture;
+  late Future<User?> _profileStatsFuture;
 
   int _storyCount = 0;
+  String _selectedStoryCategory = 'All';
+
+  final List<String> _storyCategories = const [
+    'All',
+    'Fantasy',
+    'Romance',
+    'Horror',
+    'Mystery',
+    'Adventure',
+    'Sci-Fi',
+    'Comedy',
+  ];
 
   @override
   void initState() {
@@ -31,15 +47,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _loadData() {
     setState(() {
-      _likedStoriesFuture = _apiService.fetchLikedStories();
-      _bookmarkedStoriesFuture = _apiService.fetchBookmarkedStories();
+      final userId = ApiService.currentUser?.id;
+      _followersFuture = userId != null ? _apiService.fetchFollowers(userId) : Future.value(<User>[]);
       _myStoriesFuture = _apiService.fetchUserStories().then((stories) {
         if (mounted) {
           setState(() => _storyCount = stories.length);
         }
         return stories;
       });
+      _profileStatsFuture = userId != null ? _apiService.fetchAuthorProfile(userId) : Future.value(null);
     });
+  }
+
+  Future<void> _openEditProfile() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+    );
+
+    if (result == true) {
+      _loadData();
+    }
   }
 
   Future<void> _openStoryDetail(Story story) async {
@@ -94,12 +122,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (confirm == true) {
-      await _apiService.deleteStory(story.id);
-      _loadData();
+      final result = await _apiService.deleteStory(story.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Story deleted successfully')),
-      );
+
+      if (result['success'] == true) {
+        _loadData();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Story deleted successfully')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to delete story'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
@@ -169,6 +207,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Settings opened')),
               );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.redAccent),
+            tooltip: 'Logout',
+            onPressed: () async {
+              await ApiService().logout();
+              if (context.mounted) {
+                Navigator.of(context).pushNamedAndRemoveUntil('/login', (Route<dynamic> route) => false);
+              }
             },
           ),
           const SizedBox(width: 4),
@@ -251,14 +299,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 8),
 
                       // User Bio
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 24.0),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
                         child: Text(
-                          'Avid reader, aspiring fantasy author, and coffee lover ☕📖',
+                          (ApiService.currentUser?.bio.isNotEmpty ?? false)
+                              ? ApiService.currentUser!.bio
+                              : 'No bio yet — tap Edit Profile to add one.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 13,
-                            color: Color(0xFF4A4139),
+                            color: textColorMuted,
                             height: 1.4,
                           ),
                         ),
@@ -266,29 +316,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 20),
 
                       // --- USER STATS ROW ---
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: cardColor,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: borderColor),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.03),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
+                      FutureBuilder<User?>(
+                        future: _profileStatsFuture,
+                        builder: (context, statsSnapshot) {
+                          final stats = statsSnapshot.data;
+                          return Container(
+                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: cardColor,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: borderColor),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.03),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildStatItem('Stories', '$_storyCount'),
-                            Container(width: 1, height: 28, color: borderColor),
-                            _buildStatItem('Followers', '0'),
-                            Container(width: 1, height: 28, color: borderColor),
-                            _buildStatItem('Likes Received', '0'),
-                          ],
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                _buildStatItem('Stories', '$_storyCount', null),
+                                Container(width: 1, height: 28, color: borderColor),
+                                _buildStatItem(
+                                  'Followers',
+                                  '${stats?.followersCount ?? 0}',
+                                  stats != null
+                                      ? () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => FollowListScreen(userId: stats.id, isFollowers: true),
+                                            ),
+                                          )
+                                      : null,
+                                ),
+                                Container(width: 1, height: 28, color: borderColor),
+                                _buildStatItem(
+                                  'Following',
+                                  '${stats?.followingCount ?? 0}',
+                                  stats != null
+                                      ? () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => FollowListScreen(userId: stats.id, isFollowers: false),
+                                            ),
+                                          )
+                                      : null,
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 14),
+
+                      OutlinedButton.icon(
+                        onPressed: _openEditProfile,
+                        icon: const Icon(Icons.edit_outlined, size: 16),
+                        label: const Text('Edit Profile'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: primaryTerracotta,
+                          side: const BorderSide(color: primaryTerracotta),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -298,9 +389,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ];
           },
-          // --- MY LIBRARY TAB VIEW ---
+          // --- PROFILE TAB VIEW ---
           body: DefaultTabController(
-            length: 3,
+            length: 2,
             child: Column(
               children: [
                 // TabBar
@@ -315,12 +406,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     unselectedLabelStyle: TextStyle(fontSize: 13),
                     tabs: [
                       Tab(
-                        icon: Icon(Icons.favorite_rounded, size: 18),
-                        text: 'Liked',
-                      ),
-                      Tab(
-                        icon: Icon(Icons.bookmark_rounded, size: 18),
-                        text: 'Bookmarks',
+                        icon: Icon(Icons.people_alt_rounded, size: 18),
+                        text: 'Followers',
                       ),
                       Tab(
                         icon: Icon(Icons.auto_stories_rounded, size: 18),
@@ -334,13 +421,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Expanded(
                   child: TabBarView(
                     children: [
-                      // 1. Liked Stories Tab
-                      _buildStoryListTab(_likedStoriesFuture, 'No liked stories yet'),
+                      // 1. Followers Tab
+                      _buildFollowersTab(),
 
-                      // 2. Saved Bookmarks Tab
-                      _buildStoryListTab(_bookmarkedStoriesFuture, 'No saved bookmarks yet'),
-
-                      // 3. My Stories Tab
+                      // 2. My Stories Tab (grouped by category)
                       _buildMyStoriesTab(),
                     ],
                   ),
@@ -353,7 +437,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStatItem(String label, String value) {
+  Widget _buildStatItem(String label, String value, VoidCallback? onTap) {
+    final content = _statColumn(label, value);
+    if (onTap == null) return content;
+    return InkWell(borderRadius: BorderRadius.circular(8), onTap: onTap, child: Padding(padding: const EdgeInsets.all(4.0), child: content));
+  }
+
+  Widget _statColumn(String label, String value) {
     return Column(
       children: [
         Text(
@@ -378,9 +468,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStoryListTab(Future<List<Story>> storiesFuture, String emptyMessage) {
-    return FutureBuilder<List<Story>>(
-      future: storiesFuture,
+  Widget _buildFollowersTab() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const primaryTerracotta = Color(0xFFB83B00);
+    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColorDark = isDark ? Colors.white : const Color(0xFF1E1814);
+    final textColorMuted = isDark ? Colors.white70 : const Color(0xFF736860);
+    final borderColor = isDark ? const Color(0xFF333333) : const Color(0xFFEBE4DC);
+
+    return FutureBuilder<List<User>>(
+      future: _followersFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -388,26 +485,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }
 
-        final stories = snapshot.data ?? [];
+        final followers = snapshot.data ?? [];
 
-        if (stories.isEmpty) {
+        if (followers.isEmpty) {
           return Center(
             child: Text(
-              emptyMessage,
+              'No followers yet',
               style: const TextStyle(color: Color(0xFF736860), fontSize: 14),
             ),
           );
         }
 
-        return ListView.builder(
+        return ListView.separated(
           padding: const EdgeInsets.all(16),
-          itemCount: stories.length,
+          itemCount: followers.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
-            final story = stories[index];
-            return StoryCard(
-              story: story,
-              cardType: StoryCardType.recommendation,
-              onTap: () => _openStoryDetail(story),
+            final follower = followers[index];
+            final initial = follower.username.isNotEmpty ? follower.username[0].toUpperCase() : 'U';
+
+            return InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => AuthorProfileScreen(authorId: follower.id)),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: primaryTerracotta.withValues(alpha: 0.12),
+                      backgroundImage: follower.profileImage.isNotEmpty ? MemoryImage(base64Decode(follower.profileImage)) : null,
+                      child: follower.profileImage.isEmpty
+                          ? Text(initial, style: const TextStyle(fontFamily: 'Serif', fontWeight: FontWeight.bold, color: primaryTerracotta))
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(follower.username, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColorDark)),
+                          if (follower.bio.isNotEmpty)
+                            Text(
+                              follower.bio,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 12, color: textColorMuted),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right_rounded, color: textColorMuted),
+                  ],
+                ),
+              ),
             );
           },
         );
@@ -416,6 +557,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildMyStoriesTab() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const primaryTerracotta = Color(0xFFB83B00);
+    final textColorDark = isDark ? Colors.white : const Color(0xFF1E1814);
+    final borderColor = isDark ? const Color(0xFF333333) : const Color(0xFFEBE4DC);
+
     return FutureBuilder<List<Story>>(
       future: _myStoriesFuture,
       builder: (context, snapshot) {
@@ -457,30 +603,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: stories.length,
-          itemBuilder: (context, index) {
-            final story = stories[index];
-            return Stack(
-              alignment: Alignment.topRight,
-              children: [
-                StoryCard(
-                  story: story,
-                  cardType: StoryCardType.recommendation,
-                  onTap: () => _openStoryDetail(story),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                    tooltip: 'Delete Story',
-                    onPressed: () => _confirmDeleteStory(story),
-                  ),
-                ),
-              ],
-            );
-          },
+        final filteredStories = _selectedStoryCategory == 'All'
+            ? stories
+            : stories.where((s) => s.category.toLowerCase() == _selectedStoryCategory.toLowerCase()).toList();
+
+        return Column(
+          children: [
+            SizedBox(
+              height: 42,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _storyCategories.length,
+                itemBuilder: (context, index) {
+                  final category = _storyCategories[index];
+                  final isSelected = _selectedStoryCategory == category;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: ChoiceChip(
+                      label: Text(category),
+                      selected: isSelected,
+                      selectedColor: primaryTerracotta,
+                      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                      side: BorderSide(color: isSelected ? primaryTerracotta : borderColor),
+                      labelStyle: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected ? Colors.white : textColorDark,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      onSelected: (selected) {
+                        if (selected) {
+                          setState(() => _selectedStoryCategory = category);
+                        }
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: filteredStories.length,
+                itemBuilder: (context, index) {
+                  final story = filteredStories[index];
+                  return Stack(
+                    alignment: Alignment.topRight,
+                    children: [
+                      StoryCard(
+                        story: story,
+                        cardType: StoryCardType.trending,
+                        onTap: () => _openStoryDetail(story),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: IconButton(
+                          icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                          tooltip: 'Delete Story',
+                          onPressed: () => _confirmDeleteStory(story),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
         );
       },
     );

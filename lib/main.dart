@@ -51,7 +51,7 @@ class StoryHubApp extends StatelessWidget {
             ),
             fontFamily: 'Serif',
           ),
-          initialRoute: '/login',
+          initialRoute: '/',
           routes: {
             '/': (context) => const SplashScreen(),
             '/login': (context) => const LoginScreen(),

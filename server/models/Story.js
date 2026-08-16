@@ -29,6 +29,10 @@ const StorySchema = new mongoose.Schema(
       type: String,
       default: '5 min read',
     },
+    coverUrl: {
+      type: String,
+      default: '',
+    },
     reads: {
       type: Number,
       default: 0,

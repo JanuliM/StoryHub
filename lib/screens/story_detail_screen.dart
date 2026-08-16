@@ -3,6 +3,7 @@ import '../models/story.dart';
 import '../models/comment.dart';
 import '../services/api_service.dart';
 import '../widgets/book_cover.dart';
+import 'author_profile_screen.dart';
 
 class StoryDetailScreen extends StatefulWidget {
   final Story story;
@@ -21,20 +22,70 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
   late bool _isLiked;
   late int _likeCount;
   bool _isBookmarked = false;
-  double _userStarRating = 4.8;
+  bool _bookmarkChanged = false;
   bool _isPostingComment = false;
+  bool _isFollowingAuthor = false;
+  bool _isTogglingFollow = false;
 
   late Future<List<Comment>> _commentsFuture;
+
+  String? get _authorId => widget.story.author?.id.isNotEmpty == true ? widget.story.author!.id : null;
+
+  bool get _isViewingOwnStory => _authorId != null && _authorId == ApiService.currentUser?.id;
 
   @override
   void initState() {
     super.initState();
     _likeCount = widget.story.likes;
     _isLiked = false;
-    _userStarRating = widget.story.rating;
     _loadComments();
     _incrementReads();
     _checkIfBookmarked();
+    _checkIfFollowingAuthor();
+  }
+
+  void _checkIfFollowingAuthor() async {
+    final authorId = _authorId;
+    if (authorId == null || _isViewingOwnStory) return;
+    final status = await _apiService.checkFollowStatus(authorId);
+    if (mounted) {
+      setState(() {
+        _isFollowingAuthor = status;
+      });
+    }
+  }
+
+  Future<void> _toggleFollowAuthor() async {
+    final authorId = _authorId;
+    if (authorId == null) return;
+
+    setState(() {
+      _isFollowingAuthor = !_isFollowingAuthor;
+      _isTogglingFollow = true;
+    });
+
+    final result = await _apiService.toggleFollow(authorId);
+
+    if (!mounted) return;
+    setState(() => _isTogglingFollow = false);
+
+    if (result['success'] != true) {
+      setState(() => _isFollowingAuthor = !_isFollowingAuthor);
+    }
+  }
+
+  void _openAuthorProfile() {
+    final authorId = _authorId;
+    if (authorId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Author profile unavailable for this story')),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => AuthorProfileScreen(authorId: authorId)),
+    );
   }
 
   void _checkIfBookmarked() async {
@@ -82,17 +133,29 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
   }
 
   void _toggleBookmark() async {
+    final previousState = _isBookmarked;
     setState(() {
       _isBookmarked = !_isBookmarked;
+      _bookmarkChanged = true;
     });
 
     final result = await _apiService.toggleBookmark(widget.story.id);
 
-    if (mounted) {
+    if (!mounted) return;
+
+    if (result['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_isBookmarked ? 'Saved to your Bookmarks 🔖' : 'Removed from Bookmarks'),
           duration: const Duration(seconds: 1),
+        ),
+      );
+    } else {
+      setState(() => _isBookmarked = previousState);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not update bookmark. Please try again.'),
+          backgroundColor: Colors.redAccent,
         ),
       );
     }
@@ -187,12 +250,22 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
     );
 
     if (confirm == true) {
-      await _apiService.deleteStory(widget.story.id);
+      final result = await _apiService.deleteStory(widget.story.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Story deleted successfully')),
-      );
-      Navigator.pop(context, true);
+
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Story deleted successfully')),
+        );
+        Navigator.pop(context, true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to delete story'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
@@ -212,15 +285,21 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
         widget.story.id.startsWith('my_') ||
         widget.story.id.startsWith('created_');
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) {
+        if (didPop) return;
+        Navigator.pop(context, _bookmarkChanged);
+      },
+      child: Scaffold(
+        backgroundColor: backgroundColor,
 
       appBar: AppBar(
         backgroundColor: backgroundColor,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: textColorDark),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context, _bookmarkChanged),
         ),
         title: Text(
           widget.story.title,
@@ -321,19 +400,61 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                     ),
                     const SizedBox(height: 6),
 
-                    // Author Name
-                    Text(
-                      'By ${widget.story.authorName}',
-                      style: TextStyle(
-                        fontFamily: 'Serif',
-                        fontStyle: FontStyle.italic,
-                        fontSize: 15,
-                        color: textColorMuted,
-                      ),
+                    // Author Name & Follow Button
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: _openAuthorProfile,
+                            child: Text(
+                              'By ${widget.story.authorName}',
+                              style: TextStyle(
+                                fontFamily: 'Serif',
+                                fontStyle: FontStyle.italic,
+                                fontSize: 15,
+                                color: _authorId != null ? primaryTerracotta : textColorMuted,
+                                decoration: _authorId != null ? TextDecoration.underline : TextDecoration.none,
+                                decorationColor: primaryTerracotta,
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (_authorId != null && !_isViewingOwnStory)
+                          GestureDetector(
+                            onTap: _isTogglingFollow ? null : _toggleFollowAuthor,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: _isFollowingAuthor ? Colors.transparent : primaryTerracotta,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: primaryTerracotta),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _isFollowingAuthor ? Icons.check_rounded : Icons.add_rounded,
+                                    size: 14,
+                                    color: _isFollowingAuthor ? primaryTerracotta : Colors.white,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _isFollowingAuthor ? 'Following' : 'Follow',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: _isFollowingAuthor ? primaryTerracotta : Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 16),
 
-                    // Rating & Actions Row
+                    // Actions Row
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
@@ -342,44 +463,8 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                         border: Border.all(color: borderColor),
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          // Star Ratings
-                          Row(
-                            children: [
-                              Row(
-                                children: List.generate(5, (index) {
-                                  final starValue = index + 1;
-                                  return GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _userStarRating = starValue.toDouble();
-                                      });
-                                    },
-                                    child: Icon(
-                                      starValue <= _userStarRating.floor()
-                                          ? Icons.star_rounded
-                                          : (starValue - 0.5 <= _userStarRating
-                                              ? Icons.star_half_rounded
-                                              : Icons.star_outline_rounded),
-                                      color: const Color(0xFFD69E2E),
-                                      size: 20,
-                                    ),
-                                  );
-                                }),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '${_userStarRating.toStringAsFixed(1)} / 5.0',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: textColorDark,
-                                ),
-                              ),
-                            ],
-                          ),
-
                           // Like Button Toggle
                           InkWell(
                             onTap: _toggleLike,
@@ -636,7 +721,9 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
             ),
           ],
         ),
+        ),
       ),
     );
   }
 }
+

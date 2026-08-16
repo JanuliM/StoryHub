@@ -1,10 +1,13 @@
 const Story = require('../models/Story');
+const { GoogleGenAI } = require('@google/genai');
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // @route   GET /stories
 // @desc    Fetch all recent stories with author details
 exports.getStories = async (req, res) => {
   try {
-    const stories = await Story.find()
+    const filter = req.query.author ? { author: req.query.author } : {};
+    const stories = await Story.find(filter)
       .populate('author', 'username email profileImage')
       .sort({ createdAt: -1 });
 
@@ -18,7 +21,7 @@ exports.getStories = async (req, res) => {
 // @route   POST /stories
 // @desc    Create a new story post (Protected)
 exports.createStory = async (req, res) => {
-  const { title, category, content, readTime } = req.body;
+  const { title, category, content, readTime, coverUrl } = req.body;
 
   if (!title || !content) {
     return res.status(400).json({ message: 'Title and content are required' });
@@ -32,6 +35,7 @@ exports.createStory = async (req, res) => {
       readTime: readTime || '5 min read',
       author: req.user.id,
       authorName: req.user.username,
+      coverUrl: coverUrl || '',
     });
 
     const story = await newStory.save();
@@ -165,5 +169,44 @@ exports.getTrendingStories = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// @route   POST /stories/ai-continue
+// @desc    Generate a story continuation or plot ideas (Protected)
+exports.continueStory = async (req, res) => {
+  const { content, category, mode } = req.body;
+
+  if (!content || !content.trim()) {
+    return res.status(400).json({ message: 'Write a bit of your story first' });
+  }
+
+  try {
+    const words = content.trim().split(/\s+/);
+    const recentContent = words.slice(-400).join(' '); // last ~400 words, keeps cost/tokens down
+
+    const instruction = mode === 'brainstorm'
+      ? 'Suggest 3 short, distinct plot directions the story could go next. Number them 1-3, one sentence each.'
+      : "Write the next paragraph, matching the tone and style above. Do not repeat what's already written. Keep it to 3-5 sentences.";
+
+    const prompt = `You are a creative writing assistant helping an author continue their story.
+
+Genre: ${category || 'General fiction'}
+Story so far:
+"""
+${recentContent}
+"""
+
+${instruction}`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-flash-latest',
+      contents: prompt,
+    });
+
+    res.json({ suggestion: response.text });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: 'AI request failed' });
   }
 };

@@ -341,13 +341,13 @@ class StoryCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
 
-                // Rating
+                // Reader Count
                 Row(
                   children: [
-                    const Icon(Icons.star_rounded, size: 14, color: Color(0xFFD69E2E)),
+                    Icon(Icons.remove_red_eye_outlined, size: 14, color: textColorMuted),
                     const SizedBox(width: 4),
                     Text(
-                      '${story.rating}',
+                      story.displayReads,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -454,35 +454,11 @@ class StoryCard extends StatelessWidget {
                       const SizedBox(height: 4),
 
                       Text(
-                        '${story.authorName} • ${story.readsCount}',
+                        '${story.authorName} • ${story.displayReads}',
                         style: TextStyle(
                           fontSize: 12,
                           color: textColorMuted,
                         ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      Row(
-                        children: [
-                          const Icon(Icons.star_rounded, size: 14, color: Color(0xFFD69E2E)),
-                          const SizedBox(width: 3),
-                          Text(
-                            '${story.rating}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: textColorDark,
-                              ),
-                          ),
-                          const SizedBox(width: 14),
-                          Text(
-                            '${story.chapters} chapters',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: textColorMuted,
-                              ),
-                          ),
-                        ],
                       ),
                     ],
                   ),
@@ -557,10 +533,10 @@ class StoryCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.star_rounded, size: 14, color: Color(0xFFD69E2E)),
+                      Icon(Icons.remove_red_eye_outlined, size: 14, color: textColorMuted),
                       const SizedBox(width: 3),
                       Text(
-                        '${story.rating}',
+                        story.displayReads,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
